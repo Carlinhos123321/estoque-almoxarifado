@@ -1,8 +1,12 @@
 from flask import Flask, jsonify, request
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder="static")
 
 estoque = {}
+
+@app.route("/")
+def home():
+    return app.send_static_file("index.html")
 
 @app.route("/estoque", methods=["GET"])
 def listar():
@@ -23,10 +27,6 @@ def adicionar():
         "mensagem": "Item atualizado!",
         "estoque": estoque[nome]
     }), 201
-
-@app.route("/")
-def home():
-    return "API FUNCIONANDO"
 
 if __name__ == "__main__":
     app.run(debug=True)
