@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Controle de Estoque</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      background: #0f172a;
+      color: white;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: #1e293b;
+      width: 100%;
+      max-width: 700px;
+      padding: 30px;
+      border-radius: 20px;
+      box-shadow: 0 0 30px rgba(0,0,0,0.4);
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 25px;
+      color: #38bdf8;
+    }
+
+    .form {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 25px;
+    }
+
+    input {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      outline: none;
+    }
+
+    button {
+      padding: 12px 20px;
+      border: none;
+      border-radius: 10px;
+      background: #38bdf8;
+      color: white;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    button:hover {
+      background: #0ea5e9;
+    }
+
+    .estoque {
+      margin-top: 20px;
+    }
+
+    .item {
+      background: #334155;
+      padding: 15px;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>📦 Controle de Estoque</h1>
+
+  <div class="form">
+    <input type="text" id="nome" placeholder="Nome do produto">
+    <input type="number" id="quantidade" placeholder="Quantidade">
+    <button onclick="adicionar()">Adicionar</button>
+  </div>
+
+  <div class="estoque" id="lista"></div>
+</div>
+
+<script>
+  const API = "/estoque";
+
+  async function carregarEstoque() {
+    const res = await fetch(API);
+    const dados = await res.json();
+
+    const lista = document.getElementById("lista");
+    lista.innerHTML = "";
+
+    for (let produto in dados) {
+      lista.innerHTML += `
+        <div class="item">
+          <span>${produto}</span>
+          <strong>${dados[produto]}</strong>
+        </div>
+      `;
+    }
+  }
+
+  async function adicionar() {
+    const nome = document.getElementById("nome").value;
+    const quantidade = parseInt(document.getElementById("quantidade").value);
+
+    await fetch(API, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ nome, quantidade })
+    });
+
+    document.getElementById("nome").value = "";
+    document.getElementById("quantidade").value = "";
+
+    carregarEstoque();
+  }
+
+  carregarEstoque();
+</script>
+
+</body>
+</html>
