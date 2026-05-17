@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Estoque Nexus</title>
+  <title>Estoque Nexus Cloud</title>
 
   <style>
     :root {
@@ -19,23 +19,10 @@
       --warn: #d97706;
       --danger: #d64545;
       --ok: #15803d;
-      --radius: 8px;
       --shadow: 0 18px 45px rgba(16, 17, 20, .12);
     }
 
-    body.dark {
-      --bg: #101114;
-      --surface: #181b20;
-      --surface-2: #20242b;
-      --text: #f4f7fb;
-      --muted: #a8b0bd;
-      --line: #313842;
-      --shadow: 0 18px 45px rgba(0, 0, 0, .3);
-    }
-
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       margin: 0;
@@ -44,42 +31,30 @@
       color: var(--text);
     }
 
-    button,
-    input,
-    select,
-    textarea {
-      font: inherit;
-    }
-
-    button {
-      border: 0;
-      cursor: pointer;
-    }
-
-    [hidden] {
-      display: none !important;
-    }
+    button, input, select, textarea { font: inherit; }
+    button { border: 0; cursor: pointer; }
+    [hidden] { display: none !important; }
 
     .auth-screen {
       min-height: 100vh;
       display: grid;
       place-items: center;
-      padding: 28px;
+      padding: 24px;
       background:
-        linear-gradient(120deg, rgba(15, 159, 132, .15), transparent 40%),
-        linear-gradient(320deg, rgba(107, 78, 255, .13), transparent 42%),
+        linear-gradient(120deg, rgba(15,159,132,.15), transparent 42%),
+        linear-gradient(320deg, rgba(107,78,255,.14), transparent 42%),
         var(--bg);
     }
 
     .auth-card {
-      width: min(1060px, 100%);
-      min-height: 610px;
+      width: min(1080px, 100%);
+      min-height: 620px;
       display: grid;
       grid-template-columns: 1.1fr .9fr;
-      overflow: hidden;
-      border: 1px solid var(--line);
       background: var(--surface);
+      border: 1px solid var(--line);
       border-radius: 8px;
+      overflow: hidden;
       box-shadow: var(--shadow);
     }
 
@@ -87,12 +62,12 @@
       padding: 38px;
       color: #fff;
       background:
-        linear-gradient(135deg, rgba(15, 159, 132, .92), rgba(16, 17, 20, .96)),
-        radial-gradient(circle at 75% 25%, rgba(107, 78, 255, .8), transparent 34%);
+        linear-gradient(135deg, rgba(15,159,132,.94), rgba(16,17,20,.96)),
+        radial-gradient(circle at 78% 22%, rgba(107,78,255,.9), transparent 35%);
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      gap: 30px;
+      gap: 24px;
     }
 
     .brand-mark {
@@ -102,46 +77,46 @@
       display: grid;
       place-items: center;
       background: rgba(255,255,255,.16);
-      border: 1px solid rgba(255,255,255,.28);
-      font-weight: 900;
+      border: 1px solid rgba(255,255,255,.26);
+      font-weight: 950;
     }
 
     .auth-visual h1 {
       margin: 22px 0 12px;
-      font-size: clamp(34px, 5vw, 62px);
-      line-height: .95;
+      font-size: clamp(36px, 5vw, 64px);
+      line-height: .96;
       letter-spacing: 0;
     }
 
     .auth-visual p {
-      max-width: 560px;
       margin: 0;
+      max-width: 560px;
       color: rgba(255,255,255,.78);
       line-height: 1.6;
     }
 
-    .visual-grid {
+    .cloud-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 12px;
     }
 
-    .visual-tile {
-      min-height: 112px;
-      border-radius: 8px;
+    .cloud-tile {
+      min-height: 108px;
       padding: 14px;
-      border: 1px solid rgba(255,255,255,.2);
+      border-radius: 8px;
       background: rgba(255,255,255,.1);
+      border: 1px solid rgba(255,255,255,.2);
     }
 
-    .visual-tile strong {
+    .cloud-tile strong {
       display: block;
       font-size: 28px;
       margin-bottom: 8px;
     }
 
-    .visual-tile span {
-      color: rgba(255,255,255,.7);
+    .cloud-tile span {
+      color: rgba(255,255,255,.72);
       font-size: 13px;
     }
 
@@ -152,39 +127,33 @@
       justify-content: center;
     }
 
-    .auth-tabs {
+    .tabs {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 8px;
       padding: 6px;
+      margin-bottom: 24px;
       border-radius: 8px;
       background: var(--surface-2);
-      margin-bottom: 24px;
     }
 
-    .auth-tabs button {
+    .tabs button {
       height: 44px;
       border-radius: 8px;
       background: transparent;
       color: var(--muted);
-      font-weight: 800;
+      font-weight: 900;
     }
 
-    .auth-tabs button.active {
+    .tabs button.active {
       background: var(--surface);
       color: var(--text);
       box-shadow: 0 8px 20px rgba(0,0,0,.08);
     }
 
-    .form-title {
-      margin: 0 0 8px;
-      font-size: 28px;
-    }
-
-    .form-subtitle {
-      margin: 0 0 24px;
-      color: var(--muted);
-    }
+    h2, h3 { margin-top: 0; }
+    .form-title { margin-bottom: 8px; font-size: 28px; }
+    .subtitle { margin: 0 0 22px; color: var(--muted); line-height: 1.5; }
 
     .field {
       display: grid;
@@ -195,12 +164,10 @@
     label {
       color: var(--muted);
       font-size: 13px;
-      font-weight: 800;
+      font-weight: 850;
     }
 
-    input,
-    select,
-    textarea {
+    input, select, textarea {
       width: 100%;
       min-height: 44px;
       border: 1px solid var(--line);
@@ -211,80 +178,36 @@
       outline: none;
     }
 
-    input:focus,
-    select:focus,
-    textarea:focus {
+    textarea { min-height: 86px; resize: vertical; }
+
+    input:focus, select:focus, textarea:focus {
       border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(15, 159, 132, .14);
+      box-shadow: 0 0 0 3px rgba(15,159,132,.14);
     }
 
-    textarea {
-      min-height: 88px;
-      resize: vertical;
-    }
-
-    .password-row {
+    .row {
       display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 8px;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
     }
 
-    .ghost-btn,
-    .primary-btn,
-    .danger-btn,
-    .mini-btn {
+    .primary, .ghost, .danger, .mini {
       min-height: 44px;
       border-radius: 8px;
       padding: 0 14px;
       font-weight: 900;
     }
 
-    .primary-btn {
-      background: var(--accent);
-      color: #fff;
-    }
+    .primary { background: var(--accent); color: #fff; }
+    .ghost { background: var(--surface-2); color: var(--text); border: 1px solid var(--line); }
+    .danger { background: rgba(214,69,69,.12); color: var(--danger); border: 1px solid rgba(214,69,69,.24); }
+    .mini { min-height: 34px; padding: 0 10px; font-size: 13px; background: var(--surface-2); border: 1px solid var(--line); color: var(--text); }
 
-    .ghost-btn {
-      background: var(--surface-2);
-      color: var(--text);
-      border: 1px solid var(--line);
-    }
-
-    .danger-btn {
-      background: rgba(214, 69, 69, .12);
-      color: var(--danger);
-      border: 1px solid rgba(214, 69, 69, .24);
-    }
-
-    .mini-btn {
-      min-height: 34px;
-      padding: 0 10px;
-      font-size: 13px;
-      background: var(--surface-2);
-      color: var(--text);
-      border: 1px solid var(--line);
-    }
-
-    .auth-message {
+    .msg {
       min-height: 24px;
-      margin: 14px 0 0;
-      font-weight: 800;
+      margin: 12px 0 0;
       color: var(--danger);
-    }
-
-    .strength {
-      height: 8px;
-      border-radius: 999px;
-      background: var(--surface-2);
-      overflow: hidden;
-    }
-
-    .strength span {
-      display: block;
-      height: 100%;
-      width: 0;
-      background: var(--danger);
-      transition: .2s;
+      font-weight: 850;
     }
 
     .shell {
@@ -294,9 +217,9 @@
     }
 
     .sidebar {
+      height: 100vh;
       position: sticky;
       top: 0;
-      height: 100vh;
       padding: 18px;
       background: var(--dark);
       color: #fff;
@@ -313,33 +236,22 @@
       border-bottom: 1px solid rgba(255,255,255,.12);
     }
 
-    .side-brand strong {
-      display: block;
-      font-size: 18px;
-    }
+    .side-brand strong { display: block; font-size: 18px; }
+    .side-brand span { color: rgba(255,255,255,.58); font-size: 12px; }
 
-    .side-brand span {
-      color: rgba(255,255,255,.56);
-      font-size: 12px;
-    }
-
-    .nav {
-      display: grid;
-      gap: 8px;
-    }
+    .nav { display: grid; gap: 8px; }
 
     .nav button {
       min-height: 44px;
       padding: 0 12px;
       border-radius: 8px;
       text-align: left;
-      color: rgba(255,255,255,.74);
       background: transparent;
-      font-weight: 800;
+      color: rgba(255,255,255,.74);
+      font-weight: 850;
     }
 
-    .nav button.active,
-    .nav button:hover {
+    .nav button.active, .nav button:hover {
       background: rgba(255,255,255,.1);
       color: #fff;
     }
@@ -350,10 +262,7 @@
       gap: 8px;
     }
 
-    .main {
-      min-width: 0;
-      padding: 22px;
-    }
+    .main { min-width: 0; padding: 22px; }
 
     .topbar {
       min-height: 72px;
@@ -364,50 +273,41 @@
       margin-bottom: 22px;
     }
 
-    .topbar h2 {
-      margin: 0;
-      font-size: 28px;
-    }
+    .topbar h2 { margin: 0; font-size: 28px; }
+    .topbar p { margin: 5px 0 0; color: var(--muted); }
 
-    .topbar p {
-      margin: 5px 0 0;
-      color: var(--muted);
-    }
-
-    .top-actions {
+    .actions {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
       justify-content: flex-end;
     }
 
-    .view {
-      display: none;
-    }
+    .view { display: none; }
+    .view.active { display: block; }
 
-    .view.active {
-      display: block;
-    }
-
-    .kpi-grid {
+    .kpis {
       display: grid;
-      grid-template-columns: repeat(4, minmax(160px, 1fr));
+      grid-template-columns: repeat(4, minmax(150px, 1fr));
       gap: 14px;
       margin-bottom: 18px;
+    }
+
+    .kpi, .panel {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 10px 26px rgba(16,17,20,.06);
     }
 
     .kpi {
       min-height: 128px;
       padding: 18px;
-      border-radius: 8px;
-      background: var(--surface);
-      border: 1px solid var(--line);
-      box-shadow: 0 10px 26px rgba(16, 17, 20, .06);
     }
 
     .kpi span {
       color: var(--muted);
-      font-weight: 800;
+      font-weight: 850;
       font-size: 13px;
     }
 
@@ -417,18 +317,12 @@
       font-size: 30px;
     }
 
+    .panel { padding: 18px; }
+
     .grid-2 {
       display: grid;
       grid-template-columns: 1.05fr .95fr;
       gap: 14px;
-    }
-
-    .panel {
-      padding: 18px;
-      border-radius: 8px;
-      background: var(--surface);
-      border: 1px solid var(--line);
-      box-shadow: 0 10px 26px rgba(16, 17, 20, .06);
     }
 
     .panel-head {
@@ -439,65 +333,8 @@
       margin-bottom: 16px;
     }
 
-    .panel h3 {
-      margin: 0;
-      font-size: 18px;
-    }
-
-    .muted {
-      color: var(--muted);
-    }
-
-    .radar-list,
-    .timeline-list {
-      display: grid;
-      gap: 10px;
-    }
-
-    .radar-item {
-      display: grid;
-      gap: 8px;
-      padding: 12px;
-      border-radius: 8px;
-      background: var(--surface-2);
-      border: 1px solid var(--line);
-    }
-
-    .radar-top {
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      align-items: center;
-    }
-
-    .bar {
-      height: 9px;
-      border-radius: 999px;
-      overflow: hidden;
-      background: rgba(102,112,133,.18);
-    }
-
-    .bar span {
-      display: block;
-      height: 100%;
-      width: 0;
-      border-radius: inherit;
-      background: var(--accent);
-    }
-
-    .bar.warning span {
-      background: var(--warn);
-    }
-
-    .bar.danger span {
-      background: var(--danger);
-    }
-
-    .chips {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
+    .panel h3 { margin: 0; font-size: 18px; }
+    .muted { color: var(--muted); }
 
     .chip {
       display: inline-flex;
@@ -512,27 +349,48 @@
       font-weight: 900;
     }
 
-    .chip.ok {
-      color: var(--ok);
-      border-color: rgba(21,128,61,.25);
-      background: rgba(21,128,61,.08);
+    .chip.ok { color: var(--ok); background: rgba(21,128,61,.08); border-color: rgba(21,128,61,.25); }
+    .chip.warn { color: var(--warn); background: rgba(217,119,6,.1); border-color: rgba(217,119,6,.25); }
+    .chip.danger { color: var(--danger); background: rgba(214,69,69,.1); border-color: rgba(214,69,69,.25); }
+
+    .list { display: grid; gap: 10px; }
+
+    .radar-item, .timeline-item {
+      padding: 12px;
+      border-radius: 8px;
+      background: var(--surface-2);
+      border: 1px solid var(--line);
     }
 
-    .chip.warn {
-      color: var(--warn);
-      border-color: rgba(217,119,6,.25);
-      background: rgba(217,119,6,.1);
+    .radar-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 8px;
     }
 
-    .chip.danger {
-      color: var(--danger);
-      border-color: rgba(214,69,69,.25);
-      background: rgba(214,69,69,.1);
+    .bar {
+      height: 9px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(102,112,133,.18);
+      margin-bottom: 8px;
     }
+
+    .bar span {
+      display: block;
+      height: 100%;
+      width: 0;
+      background: var(--accent);
+    }
+
+    .bar.warn span { background: var(--warn); }
+    .bar.danger span { background: var(--danger); }
 
     .toolbar {
       display: grid;
-      grid-template-columns: 1fr 180px 180px auto;
+      grid-template-columns: 1fr 190px 180px auto;
       gap: 10px;
       margin-bottom: 14px;
     }
@@ -547,11 +405,10 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 900px;
+      min-width: 920px;
     }
 
-    th,
-    td {
+    th, td {
       padding: 13px 12px;
       border-bottom: 1px solid var(--line);
       text-align: left;
@@ -559,31 +416,36 @@
     }
 
     th {
-      font-size: 12px;
-      color: var(--muted);
-      text-transform: uppercase;
       background: var(--surface-2);
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
       letter-spacing: 0;
     }
 
-    tr:last-child td {
-      border-bottom: 0;
+    .product-name { font-weight: 950; }
+    .sku { color: var(--muted); font-size: 12px; margin-top: 3px; }
+
+    .timeline-item {
+      display: grid;
+      grid-template-columns: 120px 1fr auto;
+      gap: 12px;
+      align-items: center;
     }
 
-    .product-name {
-      font-weight: 950;
-    }
-
-    .sku {
+    .timeline-date {
       color: var(--muted);
       font-size: 12px;
-      margin-top: 3px;
+      font-weight: 900;
     }
 
-    .actions {
-      display: flex;
-      gap: 6px;
-      flex-wrap: wrap;
+    .empty {
+      padding: 34px;
+      text-align: center;
+      color: var(--muted);
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      background: var(--surface-2);
     }
 
     .drawer {
@@ -593,9 +455,7 @@
       z-index: 30;
     }
 
-    .drawer.open {
-      display: block;
-    }
+    .drawer.open { display: block; }
 
     .drawer-backdrop {
       position: absolute;
@@ -623,113 +483,39 @@
       margin-bottom: 18px;
     }
 
-    .drawer-head h3 {
-      margin: 0;
-      font-size: 24px;
-    }
+    .drawer-head h3 { margin: 0; font-size: 24px; }
 
-    .form-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-
-    .field.full {
-      grid-column: 1 / -1;
-    }
-
-    .form-actions {
-      display: flex;
-      gap: 8px;
-      justify-content: flex-end;
-      margin-top: 12px;
-    }
-
-    .timeline-item {
-      display: grid;
-      grid-template-columns: 120px 1fr auto;
-      gap: 12px;
-      align-items: center;
-      padding: 12px;
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%);
+      z-index: 50;
+      min-width: min(420px, calc(100vw - 28px));
+      padding: 12px 14px;
       border-radius: 8px;
-      border: 1px solid var(--line);
-      background: var(--surface-2);
+      background: var(--dark);
+      color: #fff;
+      box-shadow: var(--shadow);
+      display: none;
+      font-weight: 850;
     }
 
-    .timeline-date {
-      color: var(--muted);
-      font-size: 12px;
-      font-weight: 900;
-    }
-
-    .settings-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 14px;
-    }
-
-    .empty {
-      padding: 34px;
-      text-align: center;
-      color: var(--muted);
-      border: 1px dashed var(--line);
-      border-radius: 8px;
-      background: var(--surface-2);
-    }
+    .toast.show { display: block; }
 
     @media (max-width: 980px) {
-      .auth-card,
-      .shell,
-      .grid-2,
-      .settings-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .sidebar {
-        position: static;
-        height: auto;
-      }
-
-      .nav {
-        grid-template-columns: repeat(2, 1fr);
-      }
-
-      .kpi-grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
-
-      .toolbar {
-        grid-template-columns: 1fr 1fr;
-      }
+      .auth-card, .shell, .grid-2 { grid-template-columns: 1fr; }
+      .sidebar { position: static; height: auto; }
+      .nav { grid-template-columns: repeat(2, 1fr); }
+      .kpis { grid-template-columns: repeat(2, 1fr); }
+      .toolbar { grid-template-columns: 1fr 1fr; }
     }
 
     @media (max-width: 640px) {
-      .auth-screen,
-      .main,
-      .auth-panel,
-      .auth-visual {
-        padding: 18px;
-      }
-
-      .auth-card {
-        min-height: auto;
-      }
-
-      .visual-grid,
-      .kpi-grid,
-      .toolbar,
-      .form-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .topbar {
-        align-items: flex-start;
-        flex-direction: column;
-      }
-
-      .timeline-item {
-        grid-template-columns: 1fr;
-      }
+      .auth-screen, .auth-panel, .auth-visual, .main { padding: 18px; }
+      .cloud-grid, .kpis, .toolbar, .row { grid-template-columns: 1fr; }
+      .topbar { align-items: flex-start; flex-direction: column; }
+      .timeline-item { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -740,82 +526,73 @@
       <div class="auth-visual">
         <div>
           <div class="brand-mark">NX</div>
-          <h1>Estoque Nexus</h1>
-          <p>Um painel de estoque com login, cadastro, radar de risco, movimentações, histórico e exportação local.</p>
+          <h1>Estoque Nexus Cloud</h1>
+          <p>Agora com cadastro, login real e banco online Supabase. Seu estoque acompanha você em qualquer computador.</p>
         </div>
 
-        <div class="visual-grid">
-          <div class="visual-tile">
-            <strong>24h</strong>
-            <span>controle contínuo</span>
-          </div>
-          <div class="visual-tile">
-            <strong>SKU</strong>
-            <span>códigos automáticos</span>
-          </div>
-          <div class="visual-tile">
-            <strong>IA</strong>
-            <span>prioridade visual</span>
-          </div>
+        <div class="cloud-grid">
+          <div class="cloud-tile"><strong>Auth</strong><span>login seguro</span></div>
+          <div class="cloud-tile"><strong>DB</strong><span>dados na nuvem</span></div>
+          <div class="cloud-tile"><strong>RLS</strong><span>cada usuário vê só o seu</span></div>
         </div>
       </div>
 
       <div class="auth-panel">
-        <div class="auth-tabs">
+        <div class="tabs">
           <button id="loginTab" class="active" type="button">Entrar</button>
           <button id="registerTab" type="button">Criar conta</button>
         </div>
 
         <form id="loginForm">
-          <h2 class="form-title">Acessar painel</h2>
-          <p class="form-subtitle">Entre com seu usuário e senha.</p>
+          <h2 class="form-title">Acessar estoque</h2>
+          <p class="subtitle">Entre com o e-mail e senha cadastrados.</p>
 
           <div class="field">
-            <label for="loginUser">Nome de usuário</label>
-            <input id="loginUser" autocomplete="username" required />
+            <label for="loginEmail">E-mail</label>
+            <input id="loginEmail" type="email" autocomplete="email" required />
           </div>
 
           <div class="field">
-            <label for="loginPass">Senha</label>
-            <div class="password-row">
-              <input id="loginPass" type="password" autocomplete="current-password" required />
-              <button class="ghost-btn" type="button" data-toggle-pass="loginPass">Ver</button>
-            </div>
+            <label for="loginPassword">Senha</label>
+            <input id="loginPassword" type="password" autocomplete="current-password" required />
           </div>
 
-          <button class="primary-btn" type="submit">Entrar</button>
-          <p id="authMessage" class="auth-message"></p>
+          <button class="primary" type="submit">Entrar</button>
+          <p id="authMessage" class="msg"></p>
         </form>
 
         <form id="registerForm" hidden>
-          <h2 class="form-title">Criar acesso</h2>
-          <p class="form-subtitle">Seu estoque ficará salvo neste navegador.</p>
+          <h2 class="form-title">Criar conta</h2>
+          <p class="subtitle">Cadastro salvo pelo Supabase Auth.</p>
 
           <div class="field">
             <label for="companyName">Nome da empresa</label>
-            <input id="companyName" maxlength="42" placeholder="Ex.: Mercado Oliveira" required />
+            <input id="companyName" maxlength="42" required />
           </div>
 
           <div class="field">
-            <label for="registerUser">Nome de usuário</label>
-            <input id="registerUser" autocomplete="username" minlength="3" maxlength="24" required />
+            <label for="username">Nome de usuário</label>
+            <input id="username" minlength="3" maxlength="24" required />
           </div>
 
           <div class="field">
-            <label for="registerPass">Senha</label>
-            <div class="password-row">
-              <input id="registerPass" type="password" autocomplete="new-password" minlength="6" required />
-              <button class="ghost-btn" type="button" data-toggle-pass="registerPass">Ver</button>
+            <label for="registerEmail">E-mail</label>
+            <input id="registerEmail" type="email" autocomplete="email" required />
+          </div>
+
+          <div class="row">
+            <div class="field">
+              <label for="registerPassword">Senha</label>
+              <input id="registerPassword" type="password" minlength="6" autocomplete="new-password" required />
             </div>
-            <div class="strength"><span id="strengthBar"></span></div>
+
+            <div class="field">
+              <label for="registerPassword2">Confirmar senha</label>
+              <input id="registerPassword2" type="password" minlength="6" autocomplete="new-password" required />
+            </div>
           </div>
 
-          <div class="field">
-            <label for="registerPass2">Confirmar senha</label>
-            <input id="registerPass2" type="password" autocomplete="new-password" minlength="6" required />
-          </div>
-
-          <button class="primary-btn" type="submit">Criar minha conta</button>
+          <button class="primary" type="submit">Criar acesso</button>
         </form>
       </div>
     </div>
@@ -827,7 +604,7 @@
         <div class="brand-mark">NX</div>
         <div>
           <strong id="companyLabel">Estoque Nexus</strong>
-          <span id="userLabel">usuário</span>
+          <span id="userLabel">conectado</span>
         </div>
       </div>
 
@@ -839,8 +616,8 @@
       </nav>
 
       <div class="side-footer">
-        <button id="themeBtn" class="ghost-btn" type="button">Alternar tema</button>
-        <button id="logoutBtn" class="danger-btn" type="button">Sair</button>
+        <button id="refreshBtn" class="ghost" type="button">Atualizar nuvem</button>
+        <button id="logoutBtn" class="danger" type="button">Sair</button>
       </div>
     </aside>
 
@@ -848,50 +625,38 @@
       <header class="topbar">
         <div>
           <h2 id="pageTitle">Dashboard</h2>
-          <p id="pageSubtitle">Visão viva do seu estoque.</p>
+          <p id="pageSubtitle">Dados carregados do Supabase.</p>
         </div>
 
-        <div class="top-actions">
-          <button id="seedBtn" class="ghost-btn" type="button">Carregar exemplo</button>
-          <button id="openProductBtn" class="primary-btn" type="button">Novo produto</button>
+        <div class="actions">
+          <button id="seedBtn" class="ghost" type="button">Carregar exemplo</button>
+          <button id="openProductBtn" class="primary" type="button">Novo produto</button>
         </div>
       </header>
 
       <section id="dashboardView" class="view active">
-        <div class="kpi-grid">
-          <div class="kpi">
-            <span>Produtos cadastrados</span>
-            <strong id="kpiProducts">0</strong>
-          </div>
-          <div class="kpi">
-            <span>Unidades em estoque</span>
-            <strong id="kpiUnits">0</strong>
-          </div>
-          <div class="kpi">
-            <span>Itens em alerta</span>
-            <strong id="kpiLow">0</strong>
-          </div>
-          <div class="kpi">
-            <span>Valor estimado</span>
-            <strong id="kpiValue">R$ 0,00</strong>
-          </div>
+        <div class="kpis">
+          <div class="kpi"><span>Produtos</span><strong id="kpiProducts">0</strong></div>
+          <div class="kpi"><span>Unidades</span><strong id="kpiUnits">0</strong></div>
+          <div class="kpi"><span>Alertas</span><strong id="kpiLow">0</strong></div>
+          <div class="kpi"><span>Valor estimado</span><strong id="kpiValue">R$ 0,00</strong></div>
         </div>
 
         <div class="grid-2">
           <div class="panel">
             <div class="panel-head">
               <h3>Radar de risco</h3>
-              <span class="chip">prioridade</span>
+              <span class="chip">estoque mínimo</span>
             </div>
-            <div id="radarList" class="radar-list"></div>
+            <div id="radarList" class="list"></div>
           </div>
 
           <div class="panel">
             <div class="panel-head">
               <h3>Fluxo recente</h3>
-              <span class="chip">histórico</span>
+              <span class="chip">nuvem</span>
             </div>
-            <div id="recentMoves" class="timeline-list"></div>
+            <div id="recentMoves" class="list"></div>
           </div>
         </div>
       </section>
@@ -899,17 +664,15 @@
       <section id="inventoryView" class="view">
         <div class="panel">
           <div class="toolbar">
-            <input id="searchInput" placeholder="Buscar por produto, SKU, fornecedor ou local" />
-            <select id="categoryFilter">
-              <option value="all">Todas categorias</option>
-            </select>
+            <input id="searchInput" placeholder="Buscar produto, SKU, fornecedor ou local" />
+            <select id="categoryFilter"><option value="all">Todas categorias</option></select>
             <select id="sortSelect">
               <option value="name">Nome</option>
               <option value="qtyAsc">Menor estoque</option>
               <option value="qtyDesc">Maior estoque</option>
               <option value="valueDesc">Maior valor</option>
             </select>
-            <button id="clearFiltersBtn" class="ghost-btn" type="button">Limpar</button>
+            <button id="clearFiltersBtn" class="ghost" type="button">Limpar</button>
           </div>
 
           <div class="table-wrap">
@@ -946,7 +709,7 @@
                 <select id="moveProduct" required></select>
               </div>
 
-              <div class="form-grid">
+              <div class="row">
                 <div class="field">
                   <label for="moveType">Tipo</label>
                   <select id="moveType">
@@ -967,42 +730,35 @@
                 <input id="moveReason" placeholder="Compra, venda, perda, conferência..." />
               </div>
 
-              <button class="primary-btn" type="submit">Salvar movimento</button>
+              <button class="primary" type="submit">Salvar movimento</button>
             </form>
           </div>
 
           <div class="panel">
             <div class="panel-head">
               <h3>Linha do tempo</h3>
-              <button id="clearMovesBtn" class="mini-btn" type="button">Limpar histórico</button>
+              <button id="clearMovesBtn" class="mini" type="button">Limpar histórico</button>
             </div>
-            <div id="movesTimeline" class="timeline-list"></div>
+            <div id="movesTimeline" class="list"></div>
           </div>
         </div>
       </section>
 
       <section id="settingsView" class="view">
-        <div class="settings-grid">
+        <div class="grid-2">
           <div class="panel">
-            <h3>Backup JSON</h3>
-            <p class="muted">Salve ou importe todos os dados do estoque.</p>
+            <h3>Backup local</h3>
+            <p class="muted">Baixe uma cópia JSON ou CSV do estoque que está no Supabase.</p>
             <div class="actions">
-              <button id="exportJsonBtn" class="primary-btn" type="button">Exportar</button>
-              <label class="ghost-btn" for="importJsonInput" style="display:inline-grid;place-items:center;">Importar</label>
-              <input id="importJsonInput" type="file" accept="application/json" hidden />
+              <button id="exportJsonBtn" class="primary" type="button">Exportar JSON</button>
+              <button id="exportCsvBtn" class="ghost" type="button">Exportar CSV</button>
             </div>
           </div>
 
           <div class="panel">
-            <h3>Planilha CSV</h3>
-            <p class="muted">Gere uma lista para abrir no Excel.</p>
-            <button id="exportCsvBtn" class="primary-btn" type="button">Baixar CSV</button>
-          </div>
-
-          <div class="panel">
             <h3>Zona crítica</h3>
-            <p class="muted">Apaga produtos e movimentos deste usuário.</p>
-            <button id="wipeBtn" class="danger-btn" type="button">Zerar estoque</button>
+            <p class="muted">Apaga produtos e movimentações apenas do usuário conectado.</p>
+            <button id="wipeBtn" class="danger" type="button">Zerar meu estoque</button>
           </div>
         </div>
       </section>
@@ -1015,32 +771,30 @@
     <div class="drawer-panel">
       <div class="drawer-head">
         <h3 id="drawerTitle">Novo produto</h3>
-        <button class="ghost-btn" type="button" data-close-drawer>Fechar</button>
+        <button class="ghost" type="button" data-close-drawer>Fechar</button>
       </div>
 
       <form id="productForm">
         <input id="productId" type="hidden" />
 
-        <div class="form-grid">
-          <div class="field full">
-            <label for="productName">Nome do produto</label>
-            <input id="productName" required />
-          </div>
+        <div class="field">
+          <label for="productName">Nome do produto</label>
+          <input id="productName" required />
+        </div>
 
+        <div class="row">
           <div class="field">
             <label for="productSku">SKU</label>
-            <div class="password-row">
-              <input id="productSku" required />
-              <button id="skuBtn" class="ghost-btn" type="button">Gerar</button>
-            </div>
+            <input id="productSku" required />
           </div>
 
           <div class="field">
             <label for="productCategory">Categoria</label>
-            <input id="productCategory" list="categoryHints" required />
-            <datalist id="categoryHints"></datalist>
+            <input id="productCategory" required />
           </div>
+        </div>
 
+        <div class="row">
           <div class="field">
             <label for="productQty">Quantidade</label>
             <input id="productQty" type="number" min="0" step="1" required />
@@ -1050,7 +804,9 @@
             <label for="productMin">Estoque mínimo</label>
             <input id="productMin" type="number" min="0" step="1" required />
           </div>
+        </div>
 
+        <div class="row">
           <div class="field">
             <label for="productPrice">Preço unitário</label>
             <input id="productPrice" type="number" min="0" step="0.01" required />
@@ -1058,47 +814,45 @@
 
           <div class="field">
             <label for="productLocation">Local</label>
-            <input id="productLocation" placeholder="Prateleira A3" required />
-          </div>
-
-          <div class="field">
-            <label for="productSupplier">Fornecedor</label>
-            <input id="productSupplier" />
-          </div>
-
-          <div class="field full">
-            <label for="productNote">Observações</label>
-            <textarea id="productNote"></textarea>
+            <input id="productLocation" placeholder="Prateleira A3" />
           </div>
         </div>
 
-        <div class="form-actions">
-          <button id="resetProductBtn" class="ghost-btn" type="button">Limpar</button>
-          <button class="primary-btn" type="submit">Salvar produto</button>
+        <div class="field">
+          <label for="productSupplier">Fornecedor</label>
+          <input id="productSupplier" />
+        </div>
+
+        <div class="field">
+          <label for="productNote">Observações</label>
+          <textarea id="productNote"></textarea>
+        </div>
+
+        <div class="actions">
+          <button id="skuBtn" class="ghost" type="button">Gerar SKU</button>
+          <button class="primary" type="submit">Salvar produto</button>
         </div>
       </form>
     </div>
   </div>
 
+  <div id="toast" class="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
   <script>
-    const STORE_USERS = "nexus_users_v1";
-    const STORE_SESSION = "nexus_session_v1";
-    const dataKey = username => `nexus_stock_${username}`;
+    const SUPABASE_URL = "https://awvrrwebckjhdrkmaijf.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_8XATeHSq0vXyYdyq1_Ysyg_lygrUCSs";
+
+    const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     const $ = selector => document.querySelector(selector);
     const $$ = selector => [...document.querySelectorAll(selector)];
 
-    let state = {
-      user: null,
-      products: [],
-      moves: [],
-      theme: "light",
-      filters: {
-        q: "",
-        category: "all",
-        sort: "name"
-      }
-    };
+    let currentUser = null;
+    let products = [];
+    let movements = [];
+    let filters = { q: "", category: "all", sort: "name" };
 
     const money = value => Number(value || 0).toLocaleString("pt-BR", {
       style: "currency",
@@ -1107,86 +861,37 @@
 
     const number = value => Number(value || 0).toLocaleString("pt-BR");
 
-    function uid() {
-      return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    function showToast(text) {
+      $("#toast").textContent = text;
+      $("#toast").classList.add("show");
+      setTimeout(() => $("#toast").classList.remove("show"), 2800);
     }
 
-    function normalizeUser(value) {
-      return String(value || "").trim().toLowerCase().replace(/\s+/g, "_");
+    function showAuthMessage(text, ok = false) {
+      $("#authMessage").textContent = text;
+      $("#authMessage").style.color = ok ? "var(--ok)" : "var(--danger)";
     }
 
-    function readJson(key, fallback) {
-      try {
-        return JSON.parse(localStorage.getItem(key)) ?? fallback;
-      } catch {
-        return fallback;
-      }
+    function escapeHtml(value) {
+      return String(value ?? "").replace(/[&<>"']/g, char => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#039;"
+      }[char]));
     }
 
-    function writeJson(key, value) {
-      localStorage.setItem(key, JSON.stringify(value));
-    }
+    function generateSku() {
+      const base = ($("#productName").value || "PROD")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-zA-Z0-9]/g, "")
+        .slice(0, 4)
+        .toUpperCase()
+        .padEnd(4, "X");
 
-    function salt() {
-      const bytes = new Uint8Array(16);
-      crypto.getRandomValues(bytes);
-      return [...bytes].map(b => b.toString(16).padStart(2, "0")).join("");
-    }
-
-    async function hashPassword(password, userSalt) {
-      const raw = `${userSalt}:${password}`;
-      if (window.crypto && crypto.subtle) {
-        const buffer = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(raw));
-        return [...new Uint8Array(buffer)].map(b => b.toString(16).padStart(2, "0")).join("");
-      }
-
-      let hash = 2166136261;
-      for (let i = 0; i < raw.length; i++) {
-        hash ^= raw.charCodeAt(i);
-        hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
-      }
-      return `fallback-${hash >>> 0}`;
-    }
-
-    function loadData() {
-      const payload = readJson(dataKey(state.user.username), null);
-      state.products = payload?.products || [];
-      state.moves = payload?.moves || [];
-      state.theme = payload?.theme || "light";
-      document.body.classList.toggle("dark", state.theme === "dark");
-    }
-
-    function saveData() {
-      if (!state.user) return;
-      writeJson(dataKey(state.user.username), {
-        products: state.products,
-        moves: state.moves,
-        theme: state.theme
-      });
-    }
-
-    function message(text, ok = false) {
-      const el = $("#authMessage");
-      el.textContent = text;
-      el.style.color = ok ? "var(--ok)" : "var(--danger)";
-    }
-
-    function passwordScore(pass) {
-      let score = 0;
-      if (pass.length >= 6) score++;
-      if (pass.length >= 10) score++;
-      if (/[A-Z]/.test(pass)) score++;
-      if (/[0-9]/.test(pass)) score++;
-      if (/[^A-Za-z0-9]/.test(pass)) score++;
-      return score;
-    }
-
-    function updateStrength() {
-      const pass = $("#registerPass").value;
-      const score = passwordScore(pass);
-      const bar = $("#strengthBar");
-      bar.style.width = `${Math.min(100, score * 20)}%`;
-      bar.style.background = score <= 2 ? "var(--danger)" : score <= 4 ? "var(--warn)" : "var(--accent)";
+      return `${base}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
     }
 
     function setAuthMode(mode) {
@@ -1195,116 +900,129 @@
       $("#registerForm").hidden = login;
       $("#loginTab").classList.toggle("active", login);
       $("#registerTab").classList.toggle("active", !login);
-      message("");
+      showAuthMessage("");
     }
 
     async function register(event) {
       event.preventDefault();
 
       const company = $("#companyName").value.trim();
-      const username = normalizeUser($("#registerUser").value);
-      const password = $("#registerPass").value;
-      const confirm = $("#registerPass2").value;
+      const username = $("#username").value.trim();
+      const email = $("#registerEmail").value.trim();
+      const password = $("#registerPassword").value;
+      const password2 = $("#registerPassword2").value;
 
-      if (username.length < 3) return message("Use um usuário com pelo menos 3 caracteres.");
-      if (password.length < 6) return message("Use uma senha com pelo menos 6 caracteres.");
-      if (password !== confirm) return message("As senhas não conferem.");
+      if (password.length < 6) return showAuthMessage("A senha precisa ter pelo menos 6 caracteres.");
+      if (password !== password2) return showAuthMessage("As senhas não conferem.");
 
-      const users = readJson(STORE_USERS, {});
-      if (users[username]) return message("Este usuário já existe.");
+      const { data, error } = await db.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { company, username }
+        }
+      });
 
-      const userSalt = salt();
-      users[username] = {
-        username,
-        company,
-        salt: userSalt,
-        passHash: await hashPassword(password, userSalt),
-        createdAt: new Date().toISOString()
-      };
+      if (error) return showAuthMessage(error.message);
 
-      writeJson(STORE_USERS, users);
-      writeJson(STORE_SESSION, username);
-      state.user = users[username];
-      loadData();
-      enterApp();
+      if (!data.session) {
+        showAuthMessage("Conta criada. Confirme o e-mail antes de entrar, ou desative Confirm email no Supabase.", true);
+        setAuthMode("login");
+        return;
+      }
+
+      currentUser = data.user;
+      await enterApp();
     }
 
     async function login(event) {
       event.preventDefault();
 
-      const username = normalizeUser($("#loginUser").value);
-      const password = $("#loginPass").value;
-      const users = readJson(STORE_USERS, {});
-      const user = users[username];
+      const email = $("#loginEmail").value.trim();
+      const password = $("#loginPassword").value;
 
-      if (!user) return message("Usuário não encontrado.");
+      const { data, error } = await db.auth.signInWithPassword({ email, password });
 
-      const passHash = await hashPassword(password, user.salt);
-      if (passHash !== user.passHash) return message("Senha incorreta.");
+      if (error) return showAuthMessage(error.message);
 
-      writeJson(STORE_SESSION, username);
-      state.user = user;
-      loadData();
-      enterApp();
+      currentUser = data.user;
+      await enterApp();
     }
 
-    function enterApp() {
-      $("#authScreen").hidden = true;
-      $("#app").hidden = false;
-      $("#companyLabel").textContent = state.user.company || "Estoque Nexus";
-      $("#userLabel").textContent = `@${state.user.username}`;
-      renderAll();
-    }
-
-    function logout() {
-      localStorage.removeItem(STORE_SESSION);
-      state.user = null;
-      state.products = [];
-      state.moves = [];
+    async function logout() {
+      await db.auth.signOut();
+      currentUser = null;
+      products = [];
+      movements = [];
       $("#app").hidden = true;
       $("#authScreen").hidden = false;
-      $("#loginPass").value = "";
       setAuthMode("login");
     }
 
-    function boot() {
-      const session = localStorage.getItem(STORE_SESSION);
-      const users = readJson(STORE_USERS, {});
+    async function enterApp() {
+      $("#authScreen").hidden = true;
+      $("#app").hidden = false;
 
-      if (session && users[session]) {
-        state.user = users[session];
-        loadData();
-        enterApp();
-      }
+      const meta = currentUser.user_metadata || {};
+      $("#companyLabel").textContent = meta.company || "Estoque Nexus";
+      $("#userLabel").textContent = meta.username ? `@${meta.username}` : currentUser.email;
+
+      await loadCloudData();
     }
 
-    function switchView(id) {
-      $$(".view").forEach(view => view.classList.remove("active"));
-      $(`#${id}`).classList.add("active");
+    async function boot() {
+      const { data } = await db.auth.getSession();
 
-      $$(".nav button").forEach(btn => btn.classList.toggle("active", btn.dataset.view === id));
+      if (data.session?.user) {
+        currentUser = data.session.user;
+        await enterApp();
+      }
 
-      const titles = {
-        dashboardView: ["Dashboard", "Visão viva do seu estoque."],
-        inventoryView: ["Estoque", "Produtos, alertas e ações rápidas."],
-        movesView: ["Movimentações", "Entradas, saídas e ajustes."],
-        settingsView: ["Central", "Backup, exportação e dados."]
-      };
+      db.auth.onAuthStateChange(async (_event, session) => {
+        if (session?.user && !currentUser) {
+          currentUser = session.user;
+          await enterApp();
+        }
+      });
+    }
 
-      $("#pageTitle").textContent = titles[id][0];
-      $("#pageSubtitle").textContent = titles[id][1];
+    async function loadCloudData() {
+      if (!currentUser) return;
+
+      const [productsResult, movementsResult] = await Promise.all([
+        db.from("products").select("*").order("created_at", { ascending: false }),
+        db.from("movements").select("*").order("created_at", { ascending: false }).limit(200)
+      ]);
+
+      if (productsResult.error) {
+        showToast(productsResult.error.message);
+        return;
+      }
+
+      if (movementsResult.error) {
+        showToast(movementsResult.error.message);
+        return;
+      }
+
+      products = productsResult.data || [];
+      movements = movementsResult.data || [];
+      renderAll();
     }
 
     function statusFor(product) {
       if (product.qty <= 0) return { label: "Zerado", className: "danger" };
-      if (product.qty <= product.min) return { label: "Repor", className: "warn" };
+      if (product.qty <= product.min_qty) return { label: "Repor", className: "warn" };
       return { label: "Saudável", className: "ok" };
     }
 
-    function filteredProducts() {
-      const q = state.filters.q.toLowerCase();
+    function categories() {
+      return [...new Set(products.map(p => p.category).filter(Boolean))].sort();
+    }
 
-      let list = state.products.filter(product => {
+    function filteredProducts() {
+      const q = filters.q.toLowerCase();
+
+      const list = products.filter(product => {
         const text = [
           product.name,
           product.sku,
@@ -1313,7 +1031,7 @@
           product.supplier
         ].join(" ").toLowerCase();
 
-        const categoryOk = state.filters.category === "all" || product.category === state.filters.category;
+        const categoryOk = filters.category === "all" || product.category === filters.category;
         return categoryOk && text.includes(q);
       });
 
@@ -1324,11 +1042,7 @@
         valueDesc: (a, b) => (b.qty * b.price) - (a.qty * a.price)
       };
 
-      return list.sort(sorters[state.filters.sort]);
-    }
-
-    function categories() {
-      return [...new Set(state.products.map(p => p.category).filter(Boolean))].sort();
+      return list.sort(sorters[filters.sort]);
     }
 
     function renderAll() {
@@ -1336,30 +1050,28 @@
       renderProducts();
       renderCategories();
       renderMoveOptions();
-      renderMoves();
+      renderMovements();
     }
 
     function renderDashboard() {
-      const totalProducts = state.products.length;
-      const totalUnits = state.products.reduce((sum, p) => sum + Number(p.qty || 0), 0);
-      const totalLow = state.products.filter(p => p.qty <= p.min).length;
-      const totalValue = state.products.reduce((sum, p) => sum + Number(p.qty || 0) * Number(p.price || 0), 0);
+      const totalProducts = products.length;
+      const totalUnits = products.reduce((sum, p) => sum + Number(p.qty || 0), 0);
+      const totalLow = products.filter(p => p.qty <= p.min_qty).length;
+      const totalValue = products.reduce((sum, p) => sum + Number(p.qty || 0) * Number(p.price || 0), 0);
 
       $("#kpiProducts").textContent = number(totalProducts);
       $("#kpiUnits").textContent = number(totalUnits);
       $("#kpiLow").textContent = number(totalLow);
       $("#kpiValue").textContent = money(totalValue);
 
-      const radar = [...state.products]
-        .sort((a, b) => (a.qty / Math.max(a.min, 1)) - (b.qty / Math.max(b.min, 1)))
+      const radar = [...products]
+        .sort((a, b) => (a.qty / Math.max(a.min_qty, 1)) - (b.qty / Math.max(b.min_qty, 1)))
         .slice(0, 6);
 
       $("#radarList").innerHTML = radar.length ? radar.map(product => {
-        const health = product.min > 0 ? Math.min(160, Math.round((product.qty / product.min) * 100)) : 100;
-        const danger = product.qty <= product.min;
-        const empty = product.qty <= 0;
-        const barClass = empty ? "danger" : danger ? "warning" : "";
+        const health = product.min_qty > 0 ? Math.min(100, Math.round((product.qty / product.min_qty) * 100)) : 100;
         const status = statusFor(product);
+        const barClass = product.qty <= 0 ? "danger" : product.qty <= product.min_qty ? "warn" : "";
 
         return `
           <div class="radar-item">
@@ -1367,20 +1079,15 @@
               <strong>${escapeHtml(product.name)}</strong>
               <span class="chip ${status.className}">${status.label}</span>
             </div>
-            <div class="bar ${barClass}">
-              <span style="width:${Math.min(100, health)}%"></span>
-            </div>
-            <div class="chips">
-              <span class="chip">${escapeHtml(product.sku)}</span>
-              <span class="chip">${number(product.qty)} un.</span>
-              <span class="chip">mín. ${number(product.min)}</span>
-            </div>
+            <div class="bar ${barClass}"><span style="width:${health}%"></span></div>
+            <span class="muted">${escapeHtml(product.sku)} · ${number(product.qty)} un. · mínimo ${number(product.min_qty)}</span>
           </div>
         `;
       }).join("") : `<div class="empty">Nenhum produto cadastrado.</div>`;
 
-      const recent = state.moves.slice(0, 5);
-      $("#recentMoves").innerHTML = recent.length ? recent.map(moveCard).join("") : `<div class="empty">Nenhuma movimentação ainda.</div>`;
+      $("#recentMoves").innerHTML = movements.length
+        ? movements.slice(0, 5).map(moveCard).join("")
+        : `<div class="empty">Nenhuma movimentação ainda.</div>`;
     }
 
     function renderProducts() {
@@ -1396,66 +1103,81 @@
               <div class="sku">${escapeHtml(product.sku)}</div>
             </td>
             <td>${escapeHtml(product.category)}</td>
-            <td>${escapeHtml(product.location)}</td>
+            <td>${escapeHtml(product.location || "-")}</td>
             <td><strong>${number(product.qty)}</strong></td>
-            <td>${number(product.min)}</td>
+            <td>${number(product.min_qty)}</td>
             <td>${money(product.price)}</td>
             <td><span class="chip ${status.className}">${status.label}</span></td>
             <td>
               <div class="actions">
-                <button class="mini-btn" type="button" onclick="quickMove('${product.id}', 'in')">+ Entrada</button>
-                <button class="mini-btn" type="button" onclick="quickMove('${product.id}', 'out')">- Saída</button>
-                <button class="mini-btn" type="button" onclick="editProduct('${product.id}')">Editar</button>
-                <button class="mini-btn" type="button" onclick="deleteProduct('${product.id}')">Excluir</button>
+                <button class="mini" type="button" onclick="quickMove('${product.id}', 'in')">+ Entrada</button>
+                <button class="mini" type="button" onclick="quickMove('${product.id}', 'out')">- Saída</button>
+                <button class="mini" type="button" onclick="editProduct('${product.id}')">Editar</button>
+                <button class="mini" type="button" onclick="deleteProduct('${product.id}')">Excluir</button>
               </div>
             </td>
           </tr>
         `;
       }).join("") : `
         <tr>
-          <td colspan="8">
-            <div class="empty">Nenhum produto encontrado.</div>
-          </td>
+          <td colspan="8"><div class="empty">Nenhum produto encontrado.</div></td>
         </tr>
       `;
     }
 
     function renderCategories() {
-      const cats = categories();
-
+      const selected = filters.category;
       $("#categoryFilter").innerHTML = `
         <option value="all">Todas categorias</option>
-        ${cats.map(cat => `<option value="${escapeAttr(cat)}">${escapeHtml(cat)}</option>`).join("")}
+        ${categories().map(cat => `<option value="${escapeHtml(cat)}">${escapeHtml(cat)}</option>`).join("")}
       `;
-      $("#categoryFilter").value = state.filters.category;
-
-      $("#categoryHints").innerHTML = cats.map(cat => `<option value="${escapeAttr(cat)}"></option>`).join("");
+      $("#categoryFilter").value = selected;
     }
 
     function renderMoveOptions() {
-      $("#moveProduct").innerHTML = state.products.length
-        ? state.products.map(p => `<option value="${p.id}">${escapeHtml(p.name)} — ${escapeHtml(p.sku)}</option>`).join("")
-        : `<option value="">Cadastre um produto</option>`;
+      $("#moveProduct").innerHTML = products.length
+        ? products.map(p => `<option value="${p.id}">${escapeHtml(p.name)} · ${escapeHtml(p.sku)}</option>`).join("")
+        : `<option value="">Cadastre um produto primeiro</option>`;
     }
 
     function moveCard(move) {
       const typeClass = move.type === "Saída" ? "danger" : move.type === "Entrada" ? "ok" : "warn";
+
       return `
         <div class="timeline-item">
-          <div class="timeline-date">${new Date(move.at).toLocaleString("pt-BR")}</div>
+          <div class="timeline-date">${new Date(move.created_at).toLocaleString("pt-BR")}</div>
           <div>
-            <strong>${escapeHtml(move.productName)}</strong>
-            <div class="muted">${escapeHtml(move.reason || "Sem motivo")} · ${number(move.before)} → ${number(move.after)}</div>
+            <strong>${escapeHtml(move.product_name)}</strong>
+            <div class="muted">${escapeHtml(move.reason || "Sem motivo")} · ${number(move.before_qty)} → ${number(move.after_qty)}</div>
           </div>
           <span class="chip ${typeClass}">${move.type} ${number(move.qty)}</span>
         </div>
       `;
     }
 
-    function renderMoves() {
-      $("#movesTimeline").innerHTML = state.moves.length
-        ? state.moves.map(moveCard).join("")
+    function renderMovements() {
+      $("#movesTimeline").innerHTML = movements.length
+        ? movements.map(moveCard).join("")
         : `<div class="empty">Nenhuma movimentação registrada.</div>`;
+    }
+
+    function switchView(id) {
+      $$(".view").forEach(view => view.classList.remove("active"));
+      $(`#${id}`).classList.add("active");
+
+      $$(".nav button").forEach(button => {
+        button.classList.toggle("active", button.dataset.view === id);
+      });
+
+      const titles = {
+        dashboardView: ["Dashboard", "Dados carregados do Supabase."],
+        inventoryView: ["Estoque", "Produtos, alertas e ações rápidas."],
+        movesView: ["Movimentações", "Entradas, saídas e ajustes."],
+        settingsView: ["Central", "Backup, exportação e dados."]
+      };
+
+      $("#pageTitle").textContent = titles[id][0];
+      $("#pageSubtitle").textContent = titles[id][1];
     }
 
     function openDrawer() {
@@ -1473,61 +1195,8 @@
       $("#productSku").value = generateSku();
     }
 
-    function generateSku() {
-      const prefix = ($("#productName").value || "PROD")
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^a-zA-Z0-9]/g, "")
-        .slice(0, 4)
-        .toUpperCase()
-        .padEnd(4, "X");
-
-      const code = Math.random().toString(36).slice(2, 7).toUpperCase();
-      return `${prefix}-${code}`;
-    }
-
-    function saveProduct(event) {
-      event.preventDefault();
-
-      const id = $("#productId").value || uid();
-      const old = state.products.find(p => p.id === id);
-      const product = {
-        id,
-        name: $("#productName").value.trim(),
-        sku: $("#productSku").value.trim().toUpperCase(),
-        category: $("#productCategory").value.trim(),
-        qty: Number($("#productQty").value),
-        min: Number($("#productMin").value),
-        price: Number($("#productPrice").value),
-        location: $("#productLocation").value.trim(),
-        supplier: $("#productSupplier").value.trim(),
-        note: $("#productNote").value.trim(),
-        createdAt: old?.createdAt || new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-
-      if (!product.name || !product.sku || !product.category) return;
-
-      if (old) {
-        const before = old.qty;
-        Object.assign(old, product);
-
-        if (before !== product.qty) {
-          addMove(product, "Ajuste", Math.abs(product.qty - before), before, product.qty, "Edição manual");
-        }
-      } else {
-        state.products.unshift(product);
-        addMove(product, "Entrada", product.qty, 0, product.qty, "Cadastro inicial");
-      }
-
-      saveData();
-      renderAll();
-      closeDrawer();
-      resetProductForm();
-    }
-
     function editProduct(id) {
-      const product = state.products.find(p => p.id === id);
+      const product = products.find(p => p.id === id);
       if (!product) return;
 
       $("#drawerTitle").textContent = "Editar produto";
@@ -1536,103 +1205,178 @@
       $("#productSku").value = product.sku;
       $("#productCategory").value = product.category;
       $("#productQty").value = product.qty;
-      $("#productMin").value = product.min;
+      $("#productMin").value = product.min_qty;
       $("#productPrice").value = product.price;
-      $("#productLocation").value = product.location;
+      $("#productLocation").value = product.location || "";
       $("#productSupplier").value = product.supplier || "";
       $("#productNote").value = product.note || "";
-
       openDrawer();
     }
 
-    function deleteProduct(id) {
-      const product = state.products.find(p => p.id === id);
-      if (!product) return;
+    async function saveProduct(event) {
+      event.preventDefault();
 
-      if (!confirm(`Excluir "${product.name}" do estoque?`)) return;
+      const id = $("#productId").value;
+      const old = products.find(p => p.id === id);
 
-      state.products = state.products.filter(p => p.id !== id);
-      saveData();
-      renderAll();
+      const payload = {
+        user_id: currentUser.id,
+        name: $("#productName").value.trim(),
+        sku: $("#productSku").value.trim().toUpperCase(),
+        category: $("#productCategory").value.trim(),
+        qty: Number($("#productQty").value),
+        min_qty: Number($("#productMin").value),
+        price: Number($("#productPrice").value),
+        location: $("#productLocation").value.trim(),
+        supplier: $("#productSupplier").value.trim(),
+        note: $("#productNote").value.trim(),
+        updated_at: new Date().toISOString()
+      };
+
+      if (!payload.name || !payload.sku || !payload.category) return showToast("Preencha nome, SKU e categoria.");
+
+      if (id) {
+        const { data, error } = await db
+          .from("products")
+          .update(payload)
+          .eq("id", id)
+          .eq("user_id", currentUser.id)
+          .select()
+          .single();
+
+        if (error) return showToast(error.message);
+
+        if (old && old.qty !== data.qty) {
+          await addMovement(data, "Ajuste", Math.abs(data.qty - old.qty), old.qty, data.qty, "Edição manual");
+        }
+
+        showToast("Produto atualizado na nuvem.");
+      } else {
+        const { data, error } = await db
+          .from("products")
+          .insert(payload)
+          .select()
+          .single();
+
+        if (error) return showToast(error.message);
+
+        await addMovement(data, "Entrada", data.qty, 0, data.qty, "Cadastro inicial");
+        showToast("Produto criado na nuvem.");
+      }
+
+      closeDrawer();
+      resetProductForm();
+      await loadCloudData();
     }
 
-    function addMove(product, type, qty, before, after, reason) {
-      state.moves.unshift({
-        id: uid(),
-        productId: product.id,
-        productName: product.name,
+    async function addMovement(product, type, qty, beforeQty, afterQty, reason) {
+      const { error } = await db.from("movements").insert({
+        user_id: currentUser.id,
+        product_id: product.id,
+        product_name: product.name,
         sku: product.sku,
         type,
         qty: Number(qty || 0),
-        before: Number(before || 0),
-        after: Number(after || 0),
-        reason,
-        at: new Date().toISOString(),
-        user: state.user.username
+        before_qty: Number(beforeQty || 0),
+        after_qty: Number(afterQty || 0),
+        reason
       });
+
+      if (error) showToast(error.message);
     }
 
-    function submitMove(event) {
-      event.preventDefault();
-
-      const product = state.products.find(p => p.id === $("#moveProduct").value);
-      if (!product) return alert("Cadastre um produto primeiro.");
-
-      const type = $("#moveType").value;
-      const qty = Number($("#moveQty").value);
-      const reason = $("#moveReason").value.trim();
-
-      if (qty < 0) return;
-
-      const before = product.qty;
-      let after = before;
-      let label = "Ajuste";
-
-      if (type === "in") {
-        after = before + qty;
-        label = "Entrada";
-      }
-
-      if (type === "out") {
-        after = Math.max(0, before - qty);
-        label = "Saída";
-      }
-
-      if (type === "set") {
-        after = qty;
-        label = "Ajuste";
-      }
-
-      product.qty = after;
-      product.updatedAt = new Date().toISOString();
-
-      addMove(product, label, qty, before, after, reason || "Movimentação manual");
-
-      $("#moveForm").reset();
-      saveData();
-      renderAll();
-    }
-
-    function quickMove(id, type) {
-      const product = state.products.find(p => p.id === id);
+    async function quickMove(id, type) {
+      const product = products.find(p => p.id === id);
       if (!product) return;
 
       const qty = Number(prompt(`Quantidade para ${type === "in" ? "entrada" : "saída"}:`));
       if (!Number.isFinite(qty) || qty <= 0) return;
 
-      const before = product.qty;
-      const after = type === "in" ? before + qty : Math.max(0, before - qty);
+      const beforeQty = product.qty;
+      const afterQty = type === "in" ? beforeQty + qty : Math.max(0, beforeQty - qty);
+      const label = type === "in" ? "Entrada" : "Saída";
 
-      product.qty = after;
-      product.updatedAt = new Date().toISOString();
+      const { data, error } = await db
+        .from("products")
+        .update({ qty: afterQty, updated_at: new Date().toISOString() })
+        .eq("id", product.id)
+        .eq("user_id", currentUser.id)
+        .select()
+        .single();
 
-      addMove(product, type === "in" ? "Entrada" : "Saída", qty, before, after, "Ação rápida");
-      saveData();
-      renderAll();
+      if (error) return showToast(error.message);
+
+      await addMovement(data, label, qty, beforeQty, afterQty, "Ação rápida");
+      await loadCloudData();
     }
 
-    function seedData() {
-      if (state.products.length && !confirm("Adicionar exemplo junto aos produtos atuais?")) return;
+    async function deleteProduct(id) {
+      const product = products.find(p => p.id === id);
+      if (!product) return;
+
+      if (!confirm(`Excluir "${product.name}" do estoque?`)) return;
+
+      const { error } = await db
+        .from("products")
+        .delete()
+        .eq("id", id)
+        .eq("user_id", currentUser.id);
+
+      if (error) return showToast(error.message);
+
+      showToast("Produto excluído.");
+      await loadCloudData();
+    }
+
+    async function submitMove(event) {
+      event.preventDefault();
+
+      const product = products.find(p => p.id === $("#moveProduct").value);
+      if (!product) return showToast("Cadastre um produto primeiro.");
+
+      const type = $("#moveType").value;
+      const qty = Number($("#moveQty").value);
+      const reason = $("#moveReason").value.trim() || "Movimentação manual";
+
+      if (!Number.isFinite(qty) || qty < 0) return showToast("Quantidade inválida.");
+
+      const beforeQty = product.qty;
+      let afterQty = beforeQty;
+      let label = "Ajuste";
+
+      if (type === "in") {
+        afterQty = beforeQty + qty;
+        label = "Entrada";
+      }
+
+      if (type === "out") {
+        afterQty = Math.max(0, beforeQty - qty);
+        label = "Saída";
+      }
+
+      if (type === "set") {
+        afterQty = qty;
+        label = "Ajuste";
+      }
+
+      const { data, error } = await db
+        .from("products")
+        .update({ qty: afterQty, updated_at: new Date().toISOString() })
+        .eq("id", product.id)
+        .eq("user_id", currentUser.id)
+        .select()
+        .single();
+
+      if (error) return showToast(error.message);
+
+      await addMovement(data, label, qty, beforeQty, afterQty, reason);
+      $("#moveForm").reset();
+      await loadCloudData();
+      showToast("Movimentação salva.");
+    }
+
+    async function seedData() {
+      if (products.length && !confirm("Adicionar exemplo junto aos produtos atuais?")) return;
 
       const sample = [
         ["Café Especial 500g", "Alimentos", 38, 12, 24.9, "A1", "Torra Norte"],
@@ -1642,76 +1386,73 @@
         ["Detergente Limão", "Limpeza", 4, 14, 2.99, "D1", "Casa Clara"]
       ];
 
-      sample.forEach(item => {
-        const product = {
-          id: uid(),
+      for (const item of sample) {
+        const payload = {
+          user_id: currentUser.id,
           name: item[0],
           sku: `${item[0].slice(0, 4).toUpperCase().replace(/\s/g, "")}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`,
           category: item[1],
           qty: item[2],
-          min: item[3],
+          min_qty: item[3],
           price: item[4],
           location: item[5],
           supplier: item[6],
-          note: "",
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          note: ""
         };
 
-        state.products.unshift(product);
-        addMove(product, "Entrada", product.qty, 0, product.qty, "Carga de exemplo");
-      });
+        const { data, error } = await db.from("products").insert(payload).select().single();
+        if (!error) await addMovement(data, "Entrada", data.qty, 0, data.qty, "Carga de exemplo");
+      }
 
-      saveData();
-      renderAll();
+      await loadCloudData();
+      showToast("Exemplos carregados.");
+    }
+
+    async function clearMoves() {
+      if (!confirm("Limpar todo o histórico de movimentações?")) return;
+
+      const { error } = await db
+        .from("movements")
+        .delete()
+        .eq("user_id", currentUser.id);
+
+      if (error) return showToast(error.message);
+
+      await loadCloudData();
+      showToast("Histórico limpo.");
+    }
+
+    async function wipeData() {
+      if (!confirm("Zerar todos os produtos e movimentos deste usuário?")) return;
+
+      await db.from("movements").delete().eq("user_id", currentUser.id);
+      const { error } = await db.from("products").delete().eq("user_id", currentUser.id);
+
+      if (error) return showToast(error.message);
+
+      await loadCloudData();
+      showToast("Estoque zerado.");
     }
 
     function exportJson() {
-      const blob = new Blob([JSON.stringify({
-        company: state.user.company,
-        username: state.user.username,
+      download(new Blob([JSON.stringify({
         exportedAt: new Date().toISOString(),
-        products: state.products,
-        moves: state.moves
-      }, null, 2)], { type: "application/json" });
-
-      download(blob, `backup-estoque-${state.user.username}.json`);
-    }
-
-    function importJson(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = () => {
-        try {
-          const payload = JSON.parse(reader.result);
-          if (!Array.isArray(payload.products)) throw new Error();
-
-          if (!confirm("Importar este backup e substituir o estoque atual?")) return;
-
-          state.products = payload.products || [];
-          state.moves = payload.moves || [];
-          saveData();
-          renderAll();
-        } catch {
-          alert("Arquivo inválido.");
-        } finally {
-          event.target.value = "";
-        }
-      };
-      reader.readAsText(file);
+        user: currentUser.email,
+        products,
+        movements
+      }, null, 2)], { type: "application/json" }), "backup-estoque.json");
     }
 
     function exportCsv() {
       const header = ["Produto", "SKU", "Categoria", "Local", "Quantidade", "Minimo", "Preco", "Fornecedor", "Status"];
-      const rows = state.products.map(p => [
+
+      const rows = products.map(p => [
         p.name,
         p.sku,
         p.category,
-        p.location,
+        p.location || "",
         p.qty,
-        p.min,
+        p.min_qty,
         p.price,
         p.supplier || "",
         statusFor(p).label
@@ -1721,7 +1462,7 @@
         .map(row => row.map(cell => `"${String(cell).replaceAll('"', '""')}"`).join(";"))
         .join("\n");
 
-      download(new Blob([csv], { type: "text/csv;charset=utf-8" }), `estoque-${state.user.username}.csv`);
+      download(new Blob([csv], { type: "text/csv;charset=utf-8" }), "estoque.csv");
     }
 
     function download(blob, filename) {
@@ -1732,62 +1473,16 @@
       URL.revokeObjectURL(link.href);
     }
 
-    function wipeData() {
-      if (!confirm("Zerar todos os produtos e movimentos deste usuário?")) return;
-      state.products = [];
-      state.moves = [];
-      saveData();
-      renderAll();
-    }
-
-    function clearMoves() {
-      if (!confirm("Limpar todo o histórico de movimentações?")) return;
-      state.moves = [];
-      saveData();
-      renderAll();
-    }
-
-    function toggleTheme() {
-      state.theme = state.theme === "dark" ? "light" : "dark";
-      document.body.classList.toggle("dark", state.theme === "dark");
-      saveData();
-    }
-
-    function escapeHtml(value) {
-      return String(value ?? "").replace(/[&<>"']/g, char => ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#039;"
-      }[char]));
-    }
-
-    function escapeAttr(value) {
-      return escapeHtml(value).replace(/"/g, "&quot;");
-    }
-
     $("#loginTab").addEventListener("click", () => setAuthMode("login"));
     $("#registerTab").addEventListener("click", () => setAuthMode("register"));
-    $("#loginForm").addEventListener("submit", login);
     $("#registerForm").addEventListener("submit", register);
-    $("#registerPass").addEventListener("input", updateStrength);
-
-    $$("[data-toggle-pass]").forEach(button => {
-      button.addEventListener("click", () => {
-        const input = $(`#${button.dataset.togglePass}`);
-        input.type = input.type === "password" ? "text" : "password";
-        button.textContent = input.type === "password" ? "Ver" : "Ocultar";
-      });
-    });
+    $("#loginForm").addEventListener("submit", login);
+    $("#logoutBtn").addEventListener("click", logout);
+    $("#refreshBtn").addEventListener("click", loadCloudData);
 
     $$(".nav button").forEach(button => {
       button.addEventListener("click", () => switchView(button.dataset.view));
     });
-
-    $("#logoutBtn").addEventListener("click", logout);
-    $("#themeBtn").addEventListener("click", toggleTheme);
-    $("#seedBtn").addEventListener("click", seedData);
 
     $("#openProductBtn").addEventListener("click", () => {
       resetProductForm();
@@ -1796,38 +1491,36 @@
 
     $$("[data-close-drawer]").forEach(el => el.addEventListener("click", closeDrawer));
     $("#productForm").addEventListener("submit", saveProduct);
-    $("#resetProductBtn").addEventListener("click", resetProductForm);
     $("#skuBtn").addEventListener("click", () => $("#productSku").value = generateSku());
-
     $("#moveForm").addEventListener("submit", submitMove);
+
+    $("#seedBtn").addEventListener("click", seedData);
     $("#clearMovesBtn").addEventListener("click", clearMoves);
+    $("#wipeBtn").addEventListener("click", wipeData);
+    $("#exportJsonBtn").addEventListener("click", exportJson);
+    $("#exportCsvBtn").addEventListener("click", exportCsv);
 
     $("#searchInput").addEventListener("input", event => {
-      state.filters.q = event.target.value;
+      filters.q = event.target.value;
       renderProducts();
     });
 
     $("#categoryFilter").addEventListener("change", event => {
-      state.filters.category = event.target.value;
+      filters.category = event.target.value;
       renderProducts();
     });
 
     $("#sortSelect").addEventListener("change", event => {
-      state.filters.sort = event.target.value;
+      filters.sort = event.target.value;
       renderProducts();
     });
 
     $("#clearFiltersBtn").addEventListener("click", () => {
-      state.filters = { q: "", category: "all", sort: "name" };
+      filters = { q: "", category: "all", sort: "name" };
       $("#searchInput").value = "";
       $("#sortSelect").value = "name";
       renderAll();
     });
-
-    $("#exportJsonBtn").addEventListener("click", exportJson);
-    $("#importJsonInput").addEventListener("change", importJson);
-    $("#exportCsvBtn").addEventListener("click", exportCsv);
-    $("#wipeBtn").addEventListener("click", wipeData);
 
     window.editProduct = editProduct;
     window.deleteProduct = deleteProduct;
