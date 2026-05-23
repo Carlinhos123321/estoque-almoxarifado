@@ -3,7 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Estoque Nexus Cloud</title>
+  <title>BackBox ERP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
 
   <style>
     :root {
@@ -517,6 +520,475 @@
       .topbar { align-items: flex-start; flex-direction: column; }
       .timeline-item { grid-template-columns: 1fr; }
     }
+
+    :root {
+      --bg: #07090f;
+      --surface: rgba(17, 24, 39, .78);
+      --surface-2: rgba(255, 255, 255, .06);
+      --text: #f6f7fb;
+      --muted: #99a3b7;
+      --line: rgba(255, 255, 255, .13);
+      --dark: #05070b;
+      --accent: #2ce6a8;
+      --accent-2: #7c5cff;
+      --accent-3: #25c7f7;
+      --warn: #f5b84b;
+      --danger: #ff5f73;
+      --ok: #4de28f;
+      --shadow: 0 24px 70px rgba(0, 0, 0, .42);
+    }
+
+    html { min-height: 100%; background: var(--bg); }
+
+    body {
+      min-height: 100vh;
+      font-family: Manrope, Segoe UI, Arial, sans-serif;
+      background:
+        radial-gradient(circle at 18% 0%, rgba(44, 230, 168, .18), transparent 28%),
+        radial-gradient(circle at 88% 14%, rgba(124, 92, 255, .18), transparent 31%),
+        linear-gradient(140deg, #05070b 0%, #0c1018 52%, #071119 100%);
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+      background-size: 42px 42px;
+      mask-image: linear-gradient(to bottom, rgba(0,0,0,.74), transparent 84%);
+    }
+
+    .auth-screen {
+      padding: clamp(18px, 4vw, 48px);
+      background: transparent;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .auth-card {
+      width: min(1180px, 100%);
+      min-height: min(720px, calc(100vh - 48px));
+      grid-template-columns: minmax(0, 1.05fr) minmax(390px, .76fr);
+      background: rgba(9, 13, 22, .72);
+      border-color: var(--line);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(22px);
+    }
+
+    .auth-visual {
+      min-height: 560px;
+      padding: clamp(28px, 4vw, 54px);
+      background:
+        linear-gradient(90deg, rgba(5, 7, 11, .88), rgba(5, 7, 11, .28) 56%, rgba(5, 7, 11, .72)),
+        linear-gradient(180deg, rgba(5, 7, 11, .18), rgba(5, 7, 11, .78)),
+        url("https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=1500&q=85") center/cover;
+      position: relative;
+    }
+
+    .auth-visual::after {
+      content: "";
+      position: absolute;
+      inset: auto 0 0;
+      height: 42%;
+      background: linear-gradient(to top, rgba(5,7,11,.82), transparent);
+      pointer-events: none;
+    }
+
+    .auth-visual > * { position: relative; z-index: 1; }
+
+    .brand-line {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 38px;
+    }
+
+    .brand-mark {
+      background: linear-gradient(145deg, rgba(44,230,168,.95), rgba(37,199,247,.74));
+      color: #06100e;
+      box-shadow: 0 12px 32px rgba(44, 230, 168, .22);
+      font-family: "Space Grotesk", Manrope, sans-serif;
+    }
+
+    .brand-copy strong,
+    .side-brand strong,
+    h2,
+    h3,
+    .auth-visual h1,
+    .kpi strong {
+      font-family: "Space Grotesk", Manrope, sans-serif;
+      letter-spacing: 0;
+    }
+
+    .brand-copy strong { display: block; font-weight: 700; }
+    .brand-copy span { color: rgba(255,255,255,.58); font-size: 12px; }
+
+    .auth-visual h1 {
+      max-width: 720px;
+      margin: 0 0 16px;
+      font-size: clamp(42px, 6.5vw, 82px);
+      line-height: .93;
+    }
+
+    .auth-visual p {
+      max-width: 590px;
+      color: rgba(255,255,255,.76);
+      line-height: 1.72;
+      font-size: 16px;
+    }
+
+    .cloud-tile,
+    .auth-panel,
+    .sidebar,
+    .kpi,
+    .panel,
+    .drawer-panel {
+      backdrop-filter: blur(22px);
+    }
+
+    .cloud-tile {
+      background: rgba(8, 12, 20, .56);
+      border-color: rgba(255,255,255,.18);
+    }
+
+    .cloud-tile strong {
+      font-family: "Space Grotesk", Manrope, sans-serif;
+      color: #f8fbff;
+    }
+
+    .auth-panel {
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03)),
+        rgba(8, 12, 20, .82);
+      border-left: 1px solid var(--line);
+    }
+
+    .tabs {
+      background: rgba(255,255,255,.06);
+      border: 1px solid var(--line);
+    }
+
+    .tabs button.active {
+      background: linear-gradient(135deg, rgba(44,230,168,.22), rgba(37,199,247,.14));
+      color: var(--text);
+      box-shadow: inset 0 0 0 1px rgba(44,230,168,.34);
+    }
+
+    label { color: #c5cad7; }
+
+    input, select, textarea {
+      border-color: var(--line);
+      background: rgba(255,255,255,.065);
+      color: var(--text);
+    }
+
+    select option { background: #111827; color: #f8fbff; }
+    input::placeholder, textarea::placeholder { color: rgba(197,202,215,.48); }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: rgba(44,230,168,.74);
+      box-shadow: 0 0 0 4px rgba(44,230,168,.12);
+      background: rgba(255,255,255,.09);
+    }
+
+    .primary {
+      background: linear-gradient(135deg, #2ce6a8, #25c7f7);
+      color: #04100f;
+      box-shadow: 0 14px 34px rgba(44,230,168,.2);
+    }
+
+    .ghost,
+    .mini {
+      background: rgba(255,255,255,.07);
+      color: var(--text);
+      border-color: var(--line);
+    }
+
+    .danger {
+      background: rgba(255,95,115,.12);
+      color: #ffd3da;
+      border-color: rgba(255,95,115,.28);
+    }
+
+    .primary,
+    .ghost,
+    .danger,
+    .mini {
+      transition: transform .16s ease, border-color .16s ease, background .16s ease;
+    }
+
+    .primary:hover,
+    .ghost:hover,
+    .danger:hover,
+    .mini:hover {
+      transform: translateY(-1px);
+      border-color: rgba(255,255,255,.22);
+    }
+
+    .shell { grid-template-columns: 292px 1fr; }
+
+    .sidebar {
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,.035)),
+        rgba(5, 7, 11, .88);
+      border-right: 1px solid var(--line);
+    }
+
+    .side-brand { padding: 8px 6px 18px; }
+    .side-brand strong { font-size: 19px; }
+
+    .nav button {
+      border: 1px solid transparent;
+      color: rgba(255,255,255,.68);
+    }
+
+    .nav button.active,
+    .nav button:hover {
+      background: linear-gradient(135deg, rgba(44,230,168,.14), rgba(124,92,255,.12));
+      border-color: rgba(255,255,255,.14);
+    }
+
+    .main { padding: clamp(18px, 2.5vw, 34px); }
+    .topbar h2 { font-size: clamp(28px, 3vw, 42px); }
+
+    .kpi,
+    .panel {
+      background: linear-gradient(180deg, rgba(255,255,255,.095), rgba(255,255,255,.045));
+      border-color: var(--line);
+      box-shadow: 0 18px 42px rgba(0,0,0,.24);
+    }
+
+    .kpi { position: relative; overflow: hidden; }
+
+    .kpi::after {
+      content: "";
+      position: absolute;
+      right: 16px;
+      bottom: 14px;
+      width: 52px;
+      height: 3px;
+      background: linear-gradient(90deg, var(--accent), var(--accent-3));
+      border-radius: 999px;
+      opacity: .75;
+    }
+
+    .kpi span { text-transform: uppercase; }
+
+    .chip {
+      background: rgba(255,255,255,.07);
+      border-color: var(--line);
+      color: #cbd3df;
+      white-space: nowrap;
+    }
+
+    .chip.ok { color: #b8ffd6; background: rgba(77,226,143,.1); border-color: rgba(77,226,143,.28); }
+    .chip.warn { color: #ffe1a3; background: rgba(245,184,75,.12); border-color: rgba(245,184,75,.3); }
+    .chip.danger { color: #ffd0d7; background: rgba(255,95,115,.12); border-color: rgba(255,95,115,.3); }
+
+    .radar-item,
+    .timeline-item,
+    .empty {
+      background: rgba(255,255,255,.055);
+      border-color: rgba(255,255,255,.1);
+    }
+
+    .bar { background: rgba(255,255,255,.1); }
+    .bar span { background: linear-gradient(90deg, var(--accent), var(--accent-3)); }
+    .bar.warn span { background: linear-gradient(90deg, var(--warn), #ffcf70); }
+    .bar.danger span { background: linear-gradient(90deg, var(--danger), #ff8aa0); }
+
+    .table-wrap {
+      border-color: var(--line);
+      background: rgba(255,255,255,.045);
+    }
+
+    th, td { border-bottom-color: rgba(255,255,255,.09); }
+    th { background: rgba(255,255,255,.055); color: #aeb8ca; }
+    tr:hover td { background: rgba(255,255,255,.035); }
+    .product-name { color: #fff; }
+
+    .drawer-backdrop {
+      background: rgba(0,0,0,.62);
+      backdrop-filter: blur(6px);
+    }
+
+    .drawer-panel {
+      background: rgba(9,13,22,.96);
+      border-left: 1px solid var(--line);
+    }
+
+    .toast {
+      background: #f8fbff;
+      color: #071119;
+    }
+
+    @media (max-width: 980px) {
+      .auth-card { min-height: auto; }
+      .auth-visual { min-height: 420px; }
+    }
+
+    @media (max-width: 640px) {
+      .actions { justify-content: flex-start; }
+    }
+
+    #app.shell {
+      grid-template-columns: 82px minmax(0, 1fr);
+    }
+
+    #app .sidebar {
+      width: 82px;
+      padding: 18px 12px;
+      overflow: hidden;
+      z-index: 20;
+      box-shadow: 18px 0 48px rgba(0, 0, 0, .28);
+      transition: width .22s ease, padding .22s ease, box-shadow .22s ease;
+    }
+
+    #app .sidebar:hover,
+    #app .sidebar:focus-within {
+      width: 292px;
+      padding: 18px;
+      box-shadow: 28px 0 70px rgba(0, 0, 0, .42);
+    }
+
+    #app .side-brand {
+      min-height: 66px;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+
+    #app .side-brand > div:not(.brand-mark) {
+      opacity: 0;
+      transform: translateX(-8px);
+      transition: opacity .18s ease, transform .18s ease;
+      pointer-events: none;
+    }
+
+    #app .sidebar:hover .side-brand > div:not(.brand-mark),
+    #app .sidebar:focus-within .side-brand > div:not(.brand-mark) {
+      opacity: 1;
+      transform: translateX(0);
+      pointer-events: auto;
+    }
+
+    #app .nav button,
+    #app .side-footer button {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 58px;
+      padding: 0 11px;
+      overflow: hidden;
+      white-space: nowrap;
+      font-size: 0;
+      pointer-events: none;
+    }
+
+    #app .nav button::before,
+    #app .side-footer button::before {
+      content: attr(data-icon);
+      width: 34px;
+      height: 34px;
+      display: inline-grid;
+      place-items: center;
+      flex: 0 0 34px;
+      border-radius: 8px;
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.1);
+      color: #e9fff7;
+      font-family: "Space Grotesk", Manrope, sans-serif;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    #app .sidebar:hover .nav button,
+    #app .sidebar:focus-within .nav button,
+    #app .sidebar:hover .side-footer button,
+    #app .sidebar:focus-within .side-footer button {
+      font-size: 14px;
+      pointer-events: auto;
+    }
+
+    #app .topbar {
+      padding: 18px;
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 8px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.075), rgba(255,255,255,.035)),
+        rgba(8, 12, 20, .5);
+      box-shadow: 0 16px 42px rgba(0,0,0,.22);
+      backdrop-filter: blur(18px);
+    }
+
+    #app .topbar p {
+      max-width: 620px;
+    }
+
+    #app .kpi {
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,.035)),
+        rgba(9, 13, 22, .72);
+    }
+
+    #app .kpi:nth-child(2)::after { background: linear-gradient(90deg, #25c7f7, #83e2ff); }
+    #app .kpi:nth-child(3)::after { background: linear-gradient(90deg, #f5b84b, #ffe1a3); }
+    #app .kpi:nth-child(4)::after { background: linear-gradient(90deg, #7de3b4, #d6b56d); }
+
+    #app .panel {
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.035)),
+        rgba(9, 13, 22, .68);
+    }
+
+    @media (max-width: 980px) {
+      #app.shell { grid-template-columns: 1fr; }
+      #app .sidebar {
+        width: 100%;
+        height: auto;
+        position: static;
+        overflow: visible;
+        padding: 18px;
+      }
+
+      #app .side-brand > div:not(.brand-mark) {
+        opacity: 1;
+        transform: none;
+        pointer-events: auto;
+      }
+
+      #app .nav button,
+      #app .side-footer button {
+        font-size: 14px;
+        pointer-events: auto;
+      }
+    }
+
+    .withdraw-fields {
+      margin: 4px 0 16px;
+      padding: 14px;
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 8px;
+      background: rgba(255,255,255,.045);
+    }
+
+    .employee-item {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: center;
+      padding: 13px;
+      border-radius: 8px;
+      background: rgba(255,255,255,.055);
+      border: 1px solid rgba(255,255,255,.1);
+    }
+
+    .employee-item strong {
+      display: block;
+      margin-bottom: 3px;
+    }
   </style>
 </head>
 
@@ -525,15 +997,21 @@
     <div class="auth-card">
       <div class="auth-visual">
         <div>
-          <div class="brand-mark">NX</div>
-          <h1>Estoque Nexus Cloud</h1>
-          <p>Agora com cadastro, login real e banco online Supabase. Seu estoque acompanha você em qualquer computador.</p>
+          <div class="brand-line">
+            <div class="brand-mark">BB</div>
+            <div class="brand-copy">
+              <strong>BackBox</strong>
+              <span>almoxarifado em modo comando</span>
+            </div>
+          </div>
+          <h1>Controle o pulso do almoxarifado.</h1>
+          <p>Um ERP escuro, direto e vivo para acompanhar entradas, saídas, alertas e valor parado sem cara de planilha improvisada.</p>
         </div>
 
         <div class="cloud-grid">
-          <div class="cloud-tile"><strong>Auth</strong><span>login seguro</span></div>
-          <div class="cloud-tile"><strong>DB</strong><span>dados na nuvem</span></div>
-          <div class="cloud-tile"><strong>RLS</strong><span>cada usuário vê só o seu</span></div>
+          <div class="cloud-tile"><strong>01</strong><span>acesso protegido</span></div>
+          <div class="cloud-tile"><strong>24h</strong><span>estoque na nuvem</span></div>
+          <div class="cloud-tile"><strong>RLS</strong><span>dados isolados por usuário</span></div>
         </div>
       </div>
 
@@ -544,8 +1022,8 @@
         </div>
 
         <form id="loginForm">
-          <h2 class="form-title">Acessar estoque</h2>
-          <p class="subtitle">Entre com o e-mail e senha cadastrados.</p>
+          <h2 class="form-title">Entrar no BackBox</h2>
+          <p class="subtitle">Acesse seu almoxarifado com e-mail e senha cadastrados.</p>
 
           <div class="field">
             <label for="loginEmail">E-mail</label>
@@ -563,7 +1041,7 @@
 
         <form id="registerForm" hidden>
           <h2 class="form-title">Criar conta</h2>
-          <p class="subtitle">Cadastro salvo pelo Supabase Auth.</p>
+          <p class="subtitle">Crie sua credencial para operar o painel BackBox.</p>
 
           <div class="field">
             <label for="companyName">Nome da empresa</label>
@@ -601,31 +1079,32 @@
   <div id="app" class="shell" hidden>
     <aside class="sidebar">
       <div class="side-brand">
-        <div class="brand-mark">NX</div>
+        <div class="brand-mark">BB</div>
         <div>
-          <strong id="companyLabel">Estoque Nexus</strong>
+          <strong id="companyLabel">BackBox</strong>
           <span id="userLabel">conectado</span>
         </div>
       </div>
 
       <nav class="nav">
-        <button class="active" data-view="dashboardView" type="button">Dashboard</button>
-        <button data-view="inventoryView" type="button">Estoque</button>
-        <button data-view="movesView" type="button">Movimentações</button>
-        <button data-view="settingsView" type="button">Central</button>
+        <button class="active" data-icon="P" data-view="dashboardView" type="button" title="Painel">Painel</button>
+        <button data-icon="E" data-view="inventoryView" type="button" title="Estoque">Estoque</button>
+        <button data-icon="M" data-view="movesView" type="button" title="Movimentos">Movimentos</button>
+        <button data-icon="F" data-view="employeesView" type="button" title="Funcionários">Funcionários</button>
+        <button data-icon="A" data-view="settingsView" type="button" title="Ajustes">Ajustes</button>
       </nav>
 
       <div class="side-footer">
-        <button id="refreshBtn" class="ghost" type="button">Atualizar nuvem</button>
-        <button id="logoutBtn" class="danger" type="button">Sair</button>
+        <button id="refreshBtn" class="ghost" data-icon="R" type="button" title="Sincronizar">Sincronizar</button>
+        <button id="logoutBtn" class="danger" data-icon="S" type="button" title="Sair">Sair</button>
       </div>
     </aside>
 
     <main class="main">
       <header class="topbar">
         <div>
-          <h2 id="pageTitle">Dashboard</h2>
-          <p id="pageSubtitle">Dados carregados do Supabase.</p>
+          <h2 id="pageTitle">Painel</h2>
+          <p id="pageSubtitle">Visão do estoque, reposições e movimentações do dia.</p>
         </div>
 
         <div class="actions">
@@ -645,7 +1124,7 @@
         <div class="grid-2">
           <div class="panel">
             <div class="panel-head">
-              <h3>Radar de risco</h3>
+              <h3>Itens para repor</h3>
               <span class="chip">estoque mínimo</span>
             </div>
             <div id="radarList" class="list"></div>
@@ -653,8 +1132,8 @@
 
           <div class="panel">
             <div class="panel-head">
-              <h3>Fluxo recente</h3>
-              <span class="chip">nuvem</span>
+              <h3>Últimos movimentos</h3>
+              <span class="chip">histórico</span>
             </div>
             <div id="recentMoves" class="list"></div>
           </div>
@@ -685,7 +1164,7 @@
                   <th>Qtd.</th>
                   <th>Mín.</th>
                   <th>Preço</th>
-                  <th>Status</th>
+                  <th>Situação</th>
                   <th>Ações</th>
                 </tr>
               </thead>
@@ -730,6 +1209,27 @@
                 <input id="moveReason" placeholder="Compra, venda, perda, conferência..." />
               </div>
 
+              <div id="withdrawPersonFields" class="withdraw-fields" hidden>
+                <div class="field">
+                  <label for="moveEmployee">Quem retirou</label>
+                  <select id="moveEmployee">
+                    <option value="">Selecionar funcionário cadastrado</option>
+                  </select>
+                </div>
+
+                <div class="row">
+                  <div class="field">
+                    <label for="moveEmployeeRegistration">Matrícula</label>
+                    <input id="moveEmployeeRegistration" placeholder="Ex.: 1042" />
+                  </div>
+
+                  <div class="field">
+                    <label for="moveEmployeeName">Nome</label>
+                    <input id="moveEmployeeName" placeholder="Nome de quem pegou" />
+                  </div>
+                </div>
+              </div>
+
               <button class="primary" type="submit">Salvar movimento</button>
             </form>
           </div>
@@ -744,11 +1244,45 @@
         </div>
       </section>
 
+      <section id="employeesView" class="view">
+        <div class="grid-2">
+          <div class="panel">
+            <div class="panel-head">
+              <h3>Cadastrar funcionário</h3>
+              <span class="chip">matrícula</span>
+            </div>
+
+            <form id="employeeForm">
+              <div class="field">
+                <label for="employeeRegistration">Matrícula</label>
+                <input id="employeeRegistration" required />
+              </div>
+
+              <div class="field">
+                <label for="employeeName">Nome</label>
+                <input id="employeeName" required />
+              </div>
+
+              <button class="primary" type="submit">Salvar funcionário</button>
+            </form>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head">
+              <h3>Funcionários</h3>
+              <span id="employeeCount" class="chip">0 cadastrados</span>
+            </div>
+
+            <div id="employeeList" class="list"></div>
+          </div>
+        </div>
+      </section>
+
       <section id="settingsView" class="view">
         <div class="grid-2">
           <div class="panel">
-            <h3>Backup local</h3>
-            <p class="muted">Baixe uma cópia JSON ou CSV do estoque que está no Supabase.</p>
+            <h3>Cópia local</h3>
+            <p class="muted">Baixe uma cópia JSON ou CSV do estoque conectado ao seu usuário.</p>
             <div class="actions">
               <button id="exportJsonBtn" class="primary" type="button">Exportar JSON</button>
               <button id="exportCsvBtn" class="ghost" type="button">Exportar CSV</button>
@@ -756,7 +1290,7 @@
           </div>
 
           <div class="panel">
-            <h3>Zona crítica</h3>
+            <h3>Área sensível</h3>
             <p class="muted">Apaga produtos e movimentações apenas do usuário conectado.</p>
             <button id="wipeBtn" class="danger" type="button">Zerar meu estoque</button>
           </div>
@@ -852,6 +1386,7 @@
     let currentUser = null;
     let products = [];
     let movements = [];
+    let employees = [];
     let filters = { q: "", category: "all", sort: "name" };
 
     const money = value => Number(value || 0).toLocaleString("pt-BR", {
@@ -882,6 +1417,10 @@
       }[char]));
     }
 
+    function jsString(value) {
+      return escapeHtml(JSON.stringify(String(value ?? "")));
+    }
+
     function generateSku() {
       const base = ($("#productName").value || "PROD")
         .normalize("NFD")
@@ -892,6 +1431,43 @@
         .padEnd(4, "X");
 
       return `${base}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
+    }
+
+    function employeeStorageKey() {
+      return `backbox:employees:${currentUser?.id || "local"}`;
+    }
+
+    function loadEmployees() {
+      try {
+        employees = JSON.parse(localStorage.getItem(employeeStorageKey())) || [];
+      } catch (_error) {
+        employees = [];
+      }
+    }
+
+    function saveEmployees() {
+      localStorage.setItem(employeeStorageKey(), JSON.stringify(employees));
+    }
+
+    function sortedEmployees() {
+      return [...employees].sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
+    }
+
+    function employeeByRegistration(registration) {
+      const clean = String(registration || "").trim().toLowerCase();
+      return employees.find(employee => String(employee.registration || "").toLowerCase() === clean);
+    }
+
+    function buildWithdrawReason(baseReason, registration, name) {
+      const reason = baseReason || "Saída manual";
+      const cleanRegistration = String(registration || "").trim();
+      const cleanName = String(name || "").trim();
+
+      if (!cleanRegistration && !cleanName) return reason;
+
+      const person = cleanName || "Funcionário sem nome";
+      const badge = cleanRegistration ? `matrícula ${cleanRegistration}` : "sem matrícula";
+      return `${reason} · Retirado por ${person} (${badge})`;
     }
 
     function setAuthMode(mode) {
@@ -954,6 +1530,7 @@
       currentUser = null;
       products = [];
       movements = [];
+      employees = [];
       $("#app").hidden = true;
       $("#authScreen").hidden = false;
       setAuthMode("login");
@@ -964,8 +1541,9 @@
       $("#app").hidden = false;
 
       const meta = currentUser.user_metadata || {};
-      $("#companyLabel").textContent = meta.company || "Estoque Nexus";
+      $("#companyLabel").textContent = meta.company || "BackBox";
       $("#userLabel").textContent = meta.username ? `@${meta.username}` : currentUser.email;
+      loadEmployees();
 
       await loadCloudData();
     }
@@ -1050,6 +1628,9 @@
       renderProducts();
       renderCategories();
       renderMoveOptions();
+      renderEmployeeOptions();
+      renderEmployees();
+      toggleWithdrawFields();
       renderMovements();
     }
 
@@ -1140,6 +1721,91 @@
         : `<option value="">Cadastre um produto primeiro</option>`;
     }
 
+    function renderEmployeeOptions() {
+      const options = sortedEmployees()
+        .map(employee => `<option value="${escapeHtml(employee.registration)}">${escapeHtml(employee.name)} · ${escapeHtml(employee.registration)}</option>`)
+        .join("");
+
+      $("#moveEmployee").innerHTML = `
+        <option value="">Selecionar funcionário cadastrado</option>
+        ${options}
+      `;
+    }
+
+    function renderEmployees() {
+      $("#employeeCount").textContent = `${number(employees.length)} ${employees.length === 1 ? "cadastrado" : "cadastrados"}`;
+
+      $("#employeeList").innerHTML = employees.length ? sortedEmployees().map(employee => `
+        <div class="employee-item">
+          <div>
+            <strong>${escapeHtml(employee.name)}</strong>
+            <span class="muted">Matrícula ${escapeHtml(employee.registration)}</span>
+          </div>
+          <button class="mini" type="button" onclick="deleteEmployee(${jsString(employee.registration)})">Excluir</button>
+        </div>
+      `).join("") : `<div class="empty">Nenhum funcionário cadastrado.</div>`;
+    }
+
+    function fillEmployeeFromSelect() {
+      const employee = employeeByRegistration($("#moveEmployee").value);
+      if (!employee) return;
+
+      $("#moveEmployeeRegistration").value = employee.registration;
+      $("#moveEmployeeName").value = employee.name;
+    }
+
+    function toggleWithdrawFields() {
+      const isOut = $("#moveType").value === "out";
+      $("#withdrawPersonFields").hidden = !isOut;
+
+      if (!isOut) {
+        $("#moveEmployee").value = "";
+        $("#moveEmployeeRegistration").value = "";
+        $("#moveEmployeeName").value = "";
+      }
+    }
+
+    function saveEmployee(event) {
+      event.preventDefault();
+
+      const registration = $("#employeeRegistration").value.trim();
+      const name = $("#employeeName").value.trim();
+
+      if (!registration || !name) return showToast("Preencha matrícula e nome.");
+
+      const existing = employeeByRegistration(registration);
+      if (existing) {
+        existing.name = name;
+        existing.updatedAt = new Date().toISOString();
+        showToast("Funcionário atualizado.");
+      } else {
+        employees.push({
+          registration,
+          name,
+          createdAt: new Date().toISOString()
+        });
+        showToast("Funcionário cadastrado.");
+      }
+
+      saveEmployees();
+      $("#employeeForm").reset();
+      renderEmployees();
+      renderEmployeeOptions();
+    }
+
+    function deleteEmployee(registration) {
+      const employee = employeeByRegistration(registration);
+      if (!employee) return;
+
+      if (!confirm(`Excluir "${employee.name}" do cadastro de funcionários?`)) return;
+
+      employees = employees.filter(item => item.registration !== employee.registration);
+      saveEmployees();
+      renderEmployees();
+      renderEmployeeOptions();
+      showToast("Funcionário removido.");
+    }
+
     function moveCard(move) {
       const typeClass = move.type === "Saída" ? "danger" : move.type === "Entrada" ? "ok" : "warn";
 
@@ -1170,10 +1836,11 @@
       });
 
       const titles = {
-        dashboardView: ["Dashboard", "Dados carregados do Supabase."],
+        dashboardView: ["Painel", "Visão do estoque, reposições e movimentações do dia."],
         inventoryView: ["Estoque", "Produtos, alertas e ações rápidas."],
-        movesView: ["Movimentações", "Entradas, saídas e ajustes."],
-        settingsView: ["Central", "Backup, exportação e dados."]
+        movesView: ["Movimentos", "Entradas, saídas e ajustes do almoxarifado."],
+        employeesView: ["Funcionários", "Cadastro usado para identificar quem retirou produtos."],
+        settingsView: ["Ajustes", "Cópias, exportação e limpeza dos seus dados."]
       };
 
       $("#pageTitle").textContent = titles[id][0];
@@ -1285,6 +1952,22 @@
       if (error) showToast(error.message);
     }
 
+    function askWithdrawPerson() {
+      const registrationInput = prompt("Matrícula de quem retirou o produto:");
+      if (registrationInput === null) return { registration: "", name: "" };
+
+      const registration = registrationInput.trim();
+      const employee = employeeByRegistration(registration);
+      if (employee) return { registration, name: employee.name };
+
+      const nameInput = prompt("Nome de quem retirou o produto:");
+      const name = employee
+        ? employee.name
+        : (nameInput || "").trim();
+
+      return { registration, name };
+    }
+
     async function quickMove(id, type) {
       const product = products.find(p => p.id === id);
       if (!product) return;
@@ -1295,6 +1978,12 @@
       const beforeQty = product.qty;
       const afterQty = type === "in" ? beforeQty + qty : Math.max(0, beforeQty - qty);
       const label = type === "in" ? "Entrada" : "Saída";
+      let reason = "Ação rápida";
+
+      if (type === "out") {
+        const person = askWithdrawPerson();
+        reason = buildWithdrawReason(reason, person.registration, person.name);
+      }
 
       const { data, error } = await db
         .from("products")
@@ -1306,7 +1995,7 @@
 
       if (error) return showToast(error.message);
 
-      await addMovement(data, label, qty, beforeQty, afterQty, "Ação rápida");
+      await addMovement(data, label, qty, beforeQty, afterQty, reason);
       await loadCloudData();
     }
 
@@ -1336,7 +2025,7 @@
 
       const type = $("#moveType").value;
       const qty = Number($("#moveQty").value);
-      const reason = $("#moveReason").value.trim() || "Movimentação manual";
+      let reason = $("#moveReason").value.trim() || "Movimentação manual";
 
       if (!Number.isFinite(qty) || qty < 0) return showToast("Quantidade inválida.");
 
@@ -1352,6 +2041,11 @@
       if (type === "out") {
         afterQty = Math.max(0, beforeQty - qty);
         label = "Saída";
+        reason = buildWithdrawReason(
+          reason,
+          $("#moveEmployeeRegistration").value,
+          $("#moveEmployeeName").value
+        );
       }
 
       if (type === "set") {
@@ -1371,6 +2065,7 @@
 
       await addMovement(data, label, qty, beforeQty, afterQty, reason);
       $("#moveForm").reset();
+      toggleWithdrawFields();
       await loadCloudData();
       showToast("Movimentação salva.");
     }
@@ -1439,12 +2134,13 @@
         exportedAt: new Date().toISOString(),
         user: currentUser.email,
         products,
-        movements
+        movements,
+        employees
       }, null, 2)], { type: "application/json" }), "backup-estoque.json");
     }
 
     function exportCsv() {
-      const header = ["Produto", "SKU", "Categoria", "Local", "Quantidade", "Minimo", "Preco", "Fornecedor", "Status"];
+      const header = ["Produto", "SKU", "Categoria", "Local", "Quantidade", "Minimo", "Preco", "Fornecedor", "Situacao"];
 
       const rows = products.map(p => [
         p.name,
@@ -1493,6 +2189,9 @@
     $("#productForm").addEventListener("submit", saveProduct);
     $("#skuBtn").addEventListener("click", () => $("#productSku").value = generateSku());
     $("#moveForm").addEventListener("submit", submitMove);
+    $("#moveType").addEventListener("change", toggleWithdrawFields);
+    $("#moveEmployee").addEventListener("change", fillEmployeeFromSelect);
+    $("#employeeForm").addEventListener("submit", saveEmployee);
 
     $("#seedBtn").addEventListener("click", seedData);
     $("#clearMovesBtn").addEventListener("click", clearMoves);
@@ -1525,6 +2224,7 @@
     window.editProduct = editProduct;
     window.deleteProduct = deleteProduct;
     window.quickMove = quickMove;
+    window.deleteEmployee = deleteEmployee;
 
     boot();
   </script>
