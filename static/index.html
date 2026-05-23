@@ -1,2232 +1,492 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BackBox ERP</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
-
-  <style>
-    :root {
-      --bg: #eef2f3;
-      --surface: #ffffff;
-      --surface-2: #f7f9fa;
-      --text: #17191c;
-      --muted: #667085;
-      --line: #d8e0e5;
-      --dark: #101114;
-      --accent: #0f9f84;
-      --accent-2: #6b4eff;
-      --warn: #d97706;
-      --danger: #d64545;
-      --ok: #15803d;
-      --shadow: 0 18px 45px rgba(16, 17, 20, .12);
-    }
-
-    * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      font-family: Inter, Segoe UI, Arial, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-    }
-
-    button, input, select, textarea { font: inherit; }
-    button { border: 0; cursor: pointer; }
-    [hidden] { display: none !important; }
-
-    .auth-screen {
-      min-height: 100vh;
-      display: grid;
-      place-items: center;
-      padding: 24px;
-      background:
-        linear-gradient(120deg, rgba(15,159,132,.15), transparent 42%),
-        linear-gradient(320deg, rgba(107,78,255,.14), transparent 42%),
-        var(--bg);
-    }
-
-    .auth-card {
-      width: min(1080px, 100%);
-      min-height: 620px;
-      display: grid;
-      grid-template-columns: 1.1fr .9fr;
-      background: var(--surface);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      overflow: hidden;
-      box-shadow: var(--shadow);
-    }
-
-    .auth-visual {
-      padding: 38px;
-      color: #fff;
-      background:
-        linear-gradient(135deg, rgba(15,159,132,.94), rgba(16,17,20,.96)),
-        radial-gradient(circle at 78% 22%, rgba(107,78,255,.9), transparent 35%);
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      gap: 24px;
-    }
-
-    .brand-mark {
-      width: 48px;
-      height: 48px;
-      border-radius: 8px;
-      display: grid;
-      place-items: center;
-      background: rgba(255,255,255,.16);
-      border: 1px solid rgba(255,255,255,.26);
-      font-weight: 950;
-    }
-
-    .auth-visual h1 {
-      margin: 22px 0 12px;
-      font-size: clamp(36px, 5vw, 64px);
-      line-height: .96;
-      letter-spacing: 0;
-    }
-
-    .auth-visual p {
-      margin: 0;
-      max-width: 560px;
-      color: rgba(255,255,255,.78);
-      line-height: 1.6;
-    }
-
-    .cloud-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
-    }
-
-    .cloud-tile {
-      min-height: 108px;
-      padding: 14px;
-      border-radius: 8px;
-      background: rgba(255,255,255,.1);
-      border: 1px solid rgba(255,255,255,.2);
-    }
-
-    .cloud-tile strong {
-      display: block;
-      font-size: 28px;
-      margin-bottom: 8px;
-    }
-
-    .cloud-tile span {
-      color: rgba(255,255,255,.72);
-      font-size: 13px;
-    }
-
-    .auth-panel {
-      padding: 38px;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-    }
-
-    .tabs {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-      padding: 6px;
-      margin-bottom: 24px;
-      border-radius: 8px;
-      background: var(--surface-2);
-    }
-
-    .tabs button {
-      height: 44px;
-      border-radius: 8px;
-      background: transparent;
-      color: var(--muted);
-      font-weight: 900;
-    }
-
-    .tabs button.active {
-      background: var(--surface);
-      color: var(--text);
-      box-shadow: 0 8px 20px rgba(0,0,0,.08);
-    }
-
-    h2, h3 { margin-top: 0; }
-    .form-title { margin-bottom: 8px; font-size: 28px; }
-    .subtitle { margin: 0 0 22px; color: var(--muted); line-height: 1.5; }
-
-    .field {
-      display: grid;
-      gap: 7px;
-      margin-bottom: 14px;
-    }
-
-    label {
-      color: var(--muted);
-      font-size: 13px;
-      font-weight: 850;
-    }
-
-    input, select, textarea {
-      width: 100%;
-      min-height: 44px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 10px 12px;
-      background: var(--surface);
-      color: var(--text);
-      outline: none;
-    }
-
-    textarea { min-height: 86px; resize: vertical; }
-
-    input:focus, select:focus, textarea:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(15,159,132,.14);
-    }
-
-    .row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-
-    .primary, .ghost, .danger, .mini {
-      min-height: 44px;
-      border-radius: 8px;
-      padding: 0 14px;
-      font-weight: 900;
-    }
-
-    .primary { background: var(--accent); color: #fff; }
-    .ghost { background: var(--surface-2); color: var(--text); border: 1px solid var(--line); }
-    .danger { background: rgba(214,69,69,.12); color: var(--danger); border: 1px solid rgba(214,69,69,.24); }
-    .mini { min-height: 34px; padding: 0 10px; font-size: 13px; background: var(--surface-2); border: 1px solid var(--line); color: var(--text); }
-
-    .msg {
-      min-height: 24px;
-      margin: 12px 0 0;
-      color: var(--danger);
-      font-weight: 850;
-    }
-
-    .shell {
-      min-height: 100vh;
-      display: grid;
-      grid-template-columns: 270px 1fr;
-    }
-
-    .sidebar {
-      height: 100vh;
-      position: sticky;
-      top: 0;
-      padding: 18px;
-      background: var(--dark);
-      color: #fff;
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-    }
-
-    .side-brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding-bottom: 16px;
-      border-bottom: 1px solid rgba(255,255,255,.12);
-    }
-
-    .side-brand strong { display: block; font-size: 18px; }
-    .side-brand span { color: rgba(255,255,255,.58); font-size: 12px; }
-
-    .nav { display: grid; gap: 8px; }
-
-    .nav button {
-      min-height: 44px;
-      padding: 0 12px;
-      border-radius: 8px;
-      text-align: left;
-      background: transparent;
-      color: rgba(255,255,255,.74);
-      font-weight: 850;
-    }
-
-    .nav button.active, .nav button:hover {
-      background: rgba(255,255,255,.1);
-      color: #fff;
-    }
-
-    .side-footer {
-      margin-top: auto;
-      display: grid;
-      gap: 8px;
-    }
-
-    .main { min-width: 0; padding: 22px; }
-
-    .topbar {
-      min-height: 72px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      margin-bottom: 22px;
-    }
-
-    .topbar h2 { margin: 0; font-size: 28px; }
-    .topbar p { margin: 5px 0 0; color: var(--muted); }
-
-    .actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      justify-content: flex-end;
-    }
-
-    .view { display: none; }
-    .view.active { display: block; }
-
-    .kpis {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(150px, 1fr));
-      gap: 14px;
-      margin-bottom: 18px;
-    }
-
-    .kpi, .panel {
-      background: var(--surface);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      box-shadow: 0 10px 26px rgba(16,17,20,.06);
-    }
-
-    .kpi {
-      min-height: 128px;
-      padding: 18px;
-    }
-
-    .kpi span {
-      color: var(--muted);
-      font-weight: 850;
-      font-size: 13px;
-    }
-
-    .kpi strong {
-      display: block;
-      margin-top: 10px;
-      font-size: 30px;
-    }
-
-    .panel { padding: 18px; }
-
-    .grid-2 {
-      display: grid;
-      grid-template-columns: 1.05fr .95fr;
-      gap: 14px;
-    }
-
-    .panel-head {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 14px;
-      margin-bottom: 16px;
-    }
-
-    .panel h3 { margin: 0; font-size: 18px; }
-    .muted { color: var(--muted); }
-
-    .chip {
-      display: inline-flex;
-      align-items: center;
-      min-height: 28px;
-      padding: 0 9px;
-      border-radius: 999px;
-      background: var(--surface-2);
-      border: 1px solid var(--line);
-      color: var(--muted);
-      font-size: 12px;
-      font-weight: 900;
-    }
-
-    .chip.ok { color: var(--ok); background: rgba(21,128,61,.08); border-color: rgba(21,128,61,.25); }
-    .chip.warn { color: var(--warn); background: rgba(217,119,6,.1); border-color: rgba(217,119,6,.25); }
-    .chip.danger { color: var(--danger); background: rgba(214,69,69,.1); border-color: rgba(214,69,69,.25); }
-
-    .list { display: grid; gap: 10px; }
-
-    .radar-item, .timeline-item {
-      padding: 12px;
-      border-radius: 8px;
-      background: var(--surface-2);
-      border: 1px solid var(--line);
-    }
-
-    .radar-top {
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      align-items: center;
-      margin-bottom: 8px;
-    }
-
-    .bar {
-      height: 9px;
-      border-radius: 999px;
-      overflow: hidden;
-      background: rgba(102,112,133,.18);
-      margin-bottom: 8px;
-    }
-
-    .bar span {
-      display: block;
-      height: 100%;
-      width: 0;
-      background: var(--accent);
-    }
-
-    .bar.warn span { background: var(--warn); }
-    .bar.danger span { background: var(--danger); }
-
-    .toolbar {
-      display: grid;
-      grid-template-columns: 1fr 190px 180px auto;
-      gap: 10px;
-      margin-bottom: 14px;
-    }
-
-    .table-wrap {
-      overflow: auto;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: var(--surface);
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      min-width: 920px;
-    }
-
-    th, td {
-      padding: 13px 12px;
-      border-bottom: 1px solid var(--line);
-      text-align: left;
-      vertical-align: middle;
-    }
-
-    th {
-      background: var(--surface-2);
-      color: var(--muted);
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0;
-    }
-
-    .product-name { font-weight: 950; }
-    .sku { color: var(--muted); font-size: 12px; margin-top: 3px; }
-
-    .timeline-item {
-      display: grid;
-      grid-template-columns: 120px 1fr auto;
-      gap: 12px;
-      align-items: center;
-    }
-
-    .timeline-date {
-      color: var(--muted);
-      font-size: 12px;
-      font-weight: 900;
-    }
-
-    .empty {
-      padding: 34px;
-      text-align: center;
-      color: var(--muted);
-      border: 1px dashed var(--line);
-      border-radius: 8px;
-      background: var(--surface-2);
-    }
-
-    .drawer {
-      position: fixed;
-      inset: 0;
-      display: none;
-      z-index: 30;
-    }
-
-    .drawer.open { display: block; }
-
-    .drawer-backdrop {
-      position: absolute;
-      inset: 0;
-      background: rgba(0,0,0,.45);
-    }
-
-    .drawer-panel {
-      position: absolute;
-      right: 0;
-      top: 0;
-      width: min(560px, 100%);
-      height: 100%;
-      overflow: auto;
-      background: var(--surface);
-      padding: 22px;
-      box-shadow: var(--shadow);
-    }
-
-    .drawer-head {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 18px;
-    }
-
-    .drawer-head h3 { margin: 0; font-size: 24px; }
-
-    .toast {
-      position: fixed;
-      left: 50%;
-      bottom: 18px;
-      transform: translateX(-50%);
-      z-index: 50;
-      min-width: min(420px, calc(100vw - 28px));
-      padding: 12px 14px;
-      border-radius: 8px;
-      background: var(--dark);
-      color: #fff;
-      box-shadow: var(--shadow);
-      display: none;
-      font-weight: 850;
-    }
-
-    .toast.show { display: block; }
-
-    @media (max-width: 980px) {
-      .auth-card, .shell, .grid-2 { grid-template-columns: 1fr; }
-      .sidebar { position: static; height: auto; }
-      .nav { grid-template-columns: repeat(2, 1fr); }
-      .kpis { grid-template-columns: repeat(2, 1fr); }
-      .toolbar { grid-template-columns: 1fr 1fr; }
-    }
-
-    @media (max-width: 640px) {
-      .auth-screen, .auth-panel, .auth-visual, .main { padding: 18px; }
-      .cloud-grid, .kpis, .toolbar, .row { grid-template-columns: 1fr; }
-      .topbar { align-items: flex-start; flex-direction: column; }
-      .timeline-item { grid-template-columns: 1fr; }
-    }
-
-    :root {
-      --bg: #07090f;
-      --surface: rgba(17, 24, 39, .78);
-      --surface-2: rgba(255, 255, 255, .06);
-      --text: #f6f7fb;
-      --muted: #99a3b7;
-      --line: rgba(255, 255, 255, .13);
-      --dark: #05070b;
-      --accent: #2ce6a8;
-      --accent-2: #7c5cff;
-      --accent-3: #25c7f7;
-      --warn: #f5b84b;
-      --danger: #ff5f73;
-      --ok: #4de28f;
-      --shadow: 0 24px 70px rgba(0, 0, 0, .42);
-    }
-
-    html { min-height: 100%; background: var(--bg); }
-
-    body {
-      min-height: 100vh;
-      font-family: Manrope, Segoe UI, Arial, sans-serif;
-      background:
-        radial-gradient(circle at 18% 0%, rgba(44, 230, 168, .18), transparent 28%),
-        radial-gradient(circle at 88% 14%, rgba(124, 92, 255, .18), transparent 31%),
-        linear-gradient(140deg, #05070b 0%, #0c1018 52%, #071119 100%);
-    }
-
-    body::before {
-      content: "";
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-      background-image:
-        linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
-      background-size: 42px 42px;
-      mask-image: linear-gradient(to bottom, rgba(0,0,0,.74), transparent 84%);
-    }
-
-    .auth-screen {
-      padding: clamp(18px, 4vw, 48px);
-      background: transparent;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .auth-card {
-      width: min(1180px, 100%);
-      min-height: min(720px, calc(100vh - 48px));
-      grid-template-columns: minmax(0, 1.05fr) minmax(390px, .76fr);
-      background: rgba(9, 13, 22, .72);
-      border-color: var(--line);
-      box-shadow: var(--shadow);
-      backdrop-filter: blur(22px);
-    }
-
-    .auth-visual {
-      min-height: 560px;
-      padding: clamp(28px, 4vw, 54px);
-      background:
-        linear-gradient(90deg, rgba(5, 7, 11, .88), rgba(5, 7, 11, .28) 56%, rgba(5, 7, 11, .72)),
-        linear-gradient(180deg, rgba(5, 7, 11, .18), rgba(5, 7, 11, .78)),
-        url("https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=1500&q=85") center/cover;
-      position: relative;
-    }
-
-    .auth-visual::after {
-      content: "";
-      position: absolute;
-      inset: auto 0 0;
-      height: 42%;
-      background: linear-gradient(to top, rgba(5,7,11,.82), transparent);
-      pointer-events: none;
-    }
-
-    .auth-visual > * { position: relative; z-index: 1; }
-
-    .brand-line {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 38px;
-    }
-
-    .brand-mark {
-      background: linear-gradient(145deg, rgba(44,230,168,.95), rgba(37,199,247,.74));
-      color: #06100e;
-      box-shadow: 0 12px 32px rgba(44, 230, 168, .22);
-      font-family: "Space Grotesk", Manrope, sans-serif;
-    }
-
-    .brand-copy strong,
-    .side-brand strong,
-    h2,
-    h3,
-    .auth-visual h1,
-    .kpi strong {
-      font-family: "Space Grotesk", Manrope, sans-serif;
-      letter-spacing: 0;
-    }
-
-    .brand-copy strong { display: block; font-weight: 700; }
-    .brand-copy span { color: rgba(255,255,255,.58); font-size: 12px; }
-
-    .auth-visual h1 {
-      max-width: 720px;
-      margin: 0 0 16px;
-      font-size: clamp(42px, 6.5vw, 82px);
-      line-height: .93;
-    }
-
-    .auth-visual p {
-      max-width: 590px;
-      color: rgba(255,255,255,.76);
-      line-height: 1.72;
-      font-size: 16px;
-    }
-
-    .cloud-tile,
-    .auth-panel,
-    .sidebar,
-    .kpi,
-    .panel,
-    .drawer-panel {
-      backdrop-filter: blur(22px);
-    }
-
-    .cloud-tile {
-      background: rgba(8, 12, 20, .56);
-      border-color: rgba(255,255,255,.18);
-    }
-
-    .cloud-tile strong {
-      font-family: "Space Grotesk", Manrope, sans-serif;
-      color: #f8fbff;
-    }
-
-    .auth-panel {
-      background:
-        linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03)),
-        rgba(8, 12, 20, .82);
-      border-left: 1px solid var(--line);
-    }
-
-    .tabs {
-      background: rgba(255,255,255,.06);
-      border: 1px solid var(--line);
-    }
-
-    .tabs button.active {
-      background: linear-gradient(135deg, rgba(44,230,168,.22), rgba(37,199,247,.14));
-      color: var(--text);
-      box-shadow: inset 0 0 0 1px rgba(44,230,168,.34);
-    }
-
-    label { color: #c5cad7; }
-
-    input, select, textarea {
-      border-color: var(--line);
-      background: rgba(255,255,255,.065);
-      color: var(--text);
-    }
-
-    select option { background: #111827; color: #f8fbff; }
-    input::placeholder, textarea::placeholder { color: rgba(197,202,215,.48); }
-
-    input:focus, select:focus, textarea:focus {
-      border-color: rgba(44,230,168,.74);
-      box-shadow: 0 0 0 4px rgba(44,230,168,.12);
-      background: rgba(255,255,255,.09);
-    }
-
-    .primary {
-      background: linear-gradient(135deg, #2ce6a8, #25c7f7);
-      color: #04100f;
-      box-shadow: 0 14px 34px rgba(44,230,168,.2);
-    }
-
-    .ghost,
-    .mini {
-      background: rgba(255,255,255,.07);
-      color: var(--text);
-      border-color: var(--line);
-    }
-
-    .danger {
-      background: rgba(255,95,115,.12);
-      color: #ffd3da;
-      border-color: rgba(255,95,115,.28);
-    }
-
-    .primary,
-    .ghost,
-    .danger,
-    .mini {
-      transition: transform .16s ease, border-color .16s ease, background .16s ease;
-    }
-
-    .primary:hover,
-    .ghost:hover,
-    .danger:hover,
-    .mini:hover {
-      transform: translateY(-1px);
-      border-color: rgba(255,255,255,.22);
-    }
-
-    .shell { grid-template-columns: 292px 1fr; }
-
-    .sidebar {
-      background:
-        linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,.035)),
-        rgba(5, 7, 11, .88);
-      border-right: 1px solid var(--line);
-    }
-
-    .side-brand { padding: 8px 6px 18px; }
-    .side-brand strong { font-size: 19px; }
-
-    .nav button {
-      border: 1px solid transparent;
-      color: rgba(255,255,255,.68);
-    }
-
-    .nav button.active,
-    .nav button:hover {
-      background: linear-gradient(135deg, rgba(44,230,168,.14), rgba(124,92,255,.12));
-      border-color: rgba(255,255,255,.14);
-    }
-
-    .main { padding: clamp(18px, 2.5vw, 34px); }
-    .topbar h2 { font-size: clamp(28px, 3vw, 42px); }
-
-    .kpi,
-    .panel {
-      background: linear-gradient(180deg, rgba(255,255,255,.095), rgba(255,255,255,.045));
-      border-color: var(--line);
-      box-shadow: 0 18px 42px rgba(0,0,0,.24);
-    }
-
-    .kpi { position: relative; overflow: hidden; }
-
-    .kpi::after {
-      content: "";
-      position: absolute;
-      right: 16px;
-      bottom: 14px;
-      width: 52px;
-      height: 3px;
-      background: linear-gradient(90deg, var(--accent), var(--accent-3));
-      border-radius: 999px;
-      opacity: .75;
-    }
-
-    .kpi span { text-transform: uppercase; }
-
-    .chip {
-      background: rgba(255,255,255,.07);
-      border-color: var(--line);
-      color: #cbd3df;
-      white-space: nowrap;
-    }
-
-    .chip.ok { color: #b8ffd6; background: rgba(77,226,143,.1); border-color: rgba(77,226,143,.28); }
-    .chip.warn { color: #ffe1a3; background: rgba(245,184,75,.12); border-color: rgba(245,184,75,.3); }
-    .chip.danger { color: #ffd0d7; background: rgba(255,95,115,.12); border-color: rgba(255,95,115,.3); }
-
-    .radar-item,
-    .timeline-item,
-    .empty {
-      background: rgba(255,255,255,.055);
-      border-color: rgba(255,255,255,.1);
-    }
-
-    .bar { background: rgba(255,255,255,.1); }
-    .bar span { background: linear-gradient(90deg, var(--accent), var(--accent-3)); }
-    .bar.warn span { background: linear-gradient(90deg, var(--warn), #ffcf70); }
-    .bar.danger span { background: linear-gradient(90deg, var(--danger), #ff8aa0); }
-
-    .table-wrap {
-      border-color: var(--line);
-      background: rgba(255,255,255,.045);
-    }
-
-    th, td { border-bottom-color: rgba(255,255,255,.09); }
-    th { background: rgba(255,255,255,.055); color: #aeb8ca; }
-    tr:hover td { background: rgba(255,255,255,.035); }
-    .product-name { color: #fff; }
-
-    .drawer-backdrop {
-      background: rgba(0,0,0,.62);
-      backdrop-filter: blur(6px);
-    }
-
-    .drawer-panel {
-      background: rgba(9,13,22,.96);
-      border-left: 1px solid var(--line);
-    }
-
-    .toast {
-      background: #f8fbff;
-      color: #071119;
-    }
-
-    @media (max-width: 980px) {
-      .auth-card { min-height: auto; }
-      .auth-visual { min-height: 420px; }
-    }
-
-    @media (max-width: 640px) {
-      .actions { justify-content: flex-start; }
-    }
-
-    #app.shell {
-      grid-template-columns: 82px minmax(0, 1fr);
-    }
-
-    #app .sidebar {
-      width: 82px;
-      padding: 18px 12px;
-      overflow: hidden;
-      z-index: 20;
-      box-shadow: 18px 0 48px rgba(0, 0, 0, .28);
-      transition: width .22s ease, padding .22s ease, box-shadow .22s ease;
-    }
-
-    #app .sidebar:hover,
-    #app .sidebar:focus-within {
-      width: 292px;
-      padding: 18px;
-      box-shadow: 28px 0 70px rgba(0, 0, 0, .42);
-    }
-
-    #app .side-brand {
-      min-height: 66px;
-      overflow: hidden;
-      white-space: nowrap;
-    }
-
-    #app .side-brand > div:not(.brand-mark) {
-      opacity: 0;
-      transform: translateX(-8px);
-      transition: opacity .18s ease, transform .18s ease;
-      pointer-events: none;
-    }
-
-    #app .sidebar:hover .side-brand > div:not(.brand-mark),
-    #app .sidebar:focus-within .side-brand > div:not(.brand-mark) {
-      opacity: 1;
-      transform: translateX(0);
-      pointer-events: auto;
-    }
-
-    #app .nav button,
-    #app .side-footer button {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      min-width: 58px;
-      padding: 0 11px;
-      overflow: hidden;
-      white-space: nowrap;
-      font-size: 0;
-      pointer-events: none;
-    }
-
-    #app .nav button::before,
-    #app .side-footer button::before {
-      content: attr(data-icon);
-      width: 34px;
-      height: 34px;
-      display: inline-grid;
-      place-items: center;
-      flex: 0 0 34px;
-      border-radius: 8px;
-      background: rgba(255,255,255,.08);
-      border: 1px solid rgba(255,255,255,.1);
-      color: #e9fff7;
-      font-family: "Space Grotesk", Manrope, sans-serif;
-      font-size: 13px;
-      font-weight: 800;
-    }
-
-    #app .sidebar:hover .nav button,
-    #app .sidebar:focus-within .nav button,
-    #app .sidebar:hover .side-footer button,
-    #app .sidebar:focus-within .side-footer button {
-      font-size: 14px;
-      pointer-events: auto;
-    }
-
-    #app .topbar {
-      padding: 18px;
-      border: 1px solid rgba(255,255,255,.1);
-      border-radius: 8px;
-      background:
-        linear-gradient(180deg, rgba(255,255,255,.075), rgba(255,255,255,.035)),
-        rgba(8, 12, 20, .5);
-      box-shadow: 0 16px 42px rgba(0,0,0,.22);
-      backdrop-filter: blur(18px);
-    }
-
-    #app .topbar p {
-      max-width: 620px;
-    }
-
-    #app .kpi {
-      background:
-        linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,.035)),
-        rgba(9, 13, 22, .72);
-    }
-
-    #app .kpi:nth-child(2)::after { background: linear-gradient(90deg, #25c7f7, #83e2ff); }
-    #app .kpi:nth-child(3)::after { background: linear-gradient(90deg, #f5b84b, #ffe1a3); }
-    #app .kpi:nth-child(4)::after { background: linear-gradient(90deg, #7de3b4, #d6b56d); }
-
-    #app .panel {
-      background:
-        linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.035)),
-        rgba(9, 13, 22, .68);
-    }
-
-    @media (max-width: 980px) {
-      #app.shell { grid-template-columns: 1fr; }
-      #app .sidebar {
-        width: 100%;
-        height: auto;
-        position: static;
-        overflow: visible;
-        padding: 18px;
-      }
-
-      #app .side-brand > div:not(.brand-mark) {
-        opacity: 1;
-        transform: none;
-        pointer-events: auto;
-      }
-
-      #app .nav button,
-      #app .side-footer button {
-        font-size: 14px;
-        pointer-events: auto;
-      }
-    }
-
-    .withdraw-fields {
-      margin: 4px 0 16px;
-      padding: 14px;
-      border: 1px solid rgba(255,255,255,.1);
-      border-radius: 8px;
-      background: rgba(255,255,255,.045);
-    }
-
-    .employee-item {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 12px;
-      align-items: center;
-      padding: 13px;
-      border-radius: 8px;
-      background: rgba(255,255,255,.055);
-      border: 1px solid rgba(255,255,255,.1);
-    }
-
-    .employee-item strong {
-      display: block;
-      margin-bottom: 3px;
-    }
-  </style>
-</head>
-
-<body>
-  <section id="authScreen" class="auth-screen">
-    <div class="auth-card">
-      <div class="auth-visual">
-        <div>
-          <div class="brand-line">
-            <div class="brand-mark">BB</div>
-            <div class="brand-copy">
-              <strong>BackBox</strong>
-              <span>almoxarifado em modo comando</span>
-            </div>
+<!-- =========================
+LOGIN ERP / WMS PROFISSIONAL
+BackBox ERP - Tela Corporativa
+========================= -->
+
+<section class="auth-screen">
+  <div class="auth-layout">
+
+    <!-- LEFT -->
+    <div class="auth-left">
+
+      <div class="auth-header">
+        <div class="brand">
+          <div class="brand-logo">BB</div>
+
+          <div>
+            <h1>BackBox ERP</h1>
+            <span>Sistema de Gestão de Estoque</span>
           </div>
-          <h1>Controle o pulso do almoxarifado.</h1>
-          <p>Um ERP escuro, direto e vivo para acompanhar entradas, saídas, alertas e valor parado sem cara de planilha improvisada.</p>
-        </div>
-
-        <div class="cloud-grid">
-          <div class="cloud-tile"><strong>01</strong><span>acesso protegido</span></div>
-          <div class="cloud-tile"><strong>24h</strong><span>estoque na nuvem</span></div>
-          <div class="cloud-tile"><strong>RLS</strong><span>dados isolados por usuário</span></div>
         </div>
       </div>
 
-      <div class="auth-panel">
-        <div class="tabs">
-          <button id="loginTab" class="active" type="button">Entrar</button>
-          <button id="registerTab" type="button">Criar conta</button>
+      <div class="auth-content">
+
+        <div class="welcome">
+          <h2>Acesse sua plataforma</h2>
+
+          <p>
+            Controle estoque, movimentações, almoxarifado e operação
+            logística em um único sistema corporativo.
+          </p>
         </div>
 
-        <form id="loginForm">
-          <h2 class="form-title">Entrar no BackBox</h2>
-          <p class="subtitle">Acesse seu almoxarifado com e-mail e senha cadastrados.</p>
+        <form id="loginForm" class="login-form">
 
           <div class="field">
-            <label for="loginEmail">E-mail</label>
-            <input id="loginEmail" type="email" autocomplete="email" required />
+            <label>E-mail corporativo</label>
+            <input
+              type="email"
+              placeholder="empresa@empresa.com.br"
+              required
+            />
           </div>
 
           <div class="field">
-            <label for="loginPassword">Senha</label>
-            <input id="loginPassword" type="password" autocomplete="current-password" required />
+            <label>Senha</label>
+            <input
+              type="password"
+              placeholder="Digite sua senha"
+              required
+            />
           </div>
 
-          <button class="primary" type="submit">Entrar</button>
-          <p id="authMessage" class="msg"></p>
+          <div class="login-options">
+            <label class="remember">
+              <input type="checkbox" />
+              <span>Manter conectado</span>
+            </label>
+
+            <a href="#">Esqueci minha senha</a>
+          </div>
+
+          <button type="submit" class="login-btn">
+            Entrar no sistema
+          </button>
+
         </form>
 
-        <form id="registerForm" hidden>
-          <h2 class="form-title">Criar conta</h2>
-          <p class="subtitle">Crie sua credencial para operar o painel BackBox.</p>
+        <div class="info-box">
+          <div class="info-icon">i</div>
 
-          <div class="field">
-            <label for="companyName">Nome da empresa</label>
-            <input id="companyName" maxlength="42" required />
-          </div>
-
-          <div class="field">
-            <label for="username">Nome de usuário</label>
-            <input id="username" minlength="3" maxlength="24" required />
-          </div>
-
-          <div class="field">
-            <label for="registerEmail">E-mail</label>
-            <input id="registerEmail" type="email" autocomplete="email" required />
-          </div>
-
-          <div class="row">
-            <div class="field">
-              <label for="registerPassword">Senha</label>
-              <input id="registerPassword" type="password" minlength="6" autocomplete="new-password" required />
-            </div>
-
-            <div class="field">
-              <label for="registerPassword2">Confirmar senha</label>
-              <input id="registerPassword2" type="password" minlength="6" autocomplete="new-password" required />
-            </div>
-          </div>
-
-          <button class="primary" type="submit">Criar acesso</button>
-        </form>
-      </div>
-    </div>
-  </section>
-
-  <div id="app" class="shell" hidden>
-    <aside class="sidebar">
-      <div class="side-brand">
-        <div class="brand-mark">BB</div>
-        <div>
-          <strong id="companyLabel">BackBox</strong>
-          <span id="userLabel">conectado</span>
-        </div>
-      </div>
-
-      <nav class="nav">
-        <button class="active" data-icon="P" data-view="dashboardView" type="button" title="Painel">Painel</button>
-        <button data-icon="E" data-view="inventoryView" type="button" title="Estoque">Estoque</button>
-        <button data-icon="M" data-view="movesView" type="button" title="Movimentos">Movimentos</button>
-        <button data-icon="F" data-view="employeesView" type="button" title="Funcionários">Funcionários</button>
-        <button data-icon="A" data-view="settingsView" type="button" title="Ajustes">Ajustes</button>
-      </nav>
-
-      <div class="side-footer">
-        <button id="refreshBtn" class="ghost" data-icon="R" type="button" title="Sincronizar">Sincronizar</button>
-        <button id="logoutBtn" class="danger" data-icon="S" type="button" title="Sair">Sair</button>
-      </div>
-    </aside>
-
-    <main class="main">
-      <header class="topbar">
-        <div>
-          <h2 id="pageTitle">Painel</h2>
-          <p id="pageSubtitle">Visão do estoque, reposições e movimentações do dia.</p>
-        </div>
-
-        <div class="actions">
-          <button id="seedBtn" class="ghost" type="button">Carregar exemplo</button>
-          <button id="openProductBtn" class="primary" type="button">Novo produto</button>
-        </div>
-      </header>
-
-      <section id="dashboardView" class="view active">
-        <div class="kpis">
-          <div class="kpi"><span>Produtos</span><strong id="kpiProducts">0</strong></div>
-          <div class="kpi"><span>Unidades</span><strong id="kpiUnits">0</strong></div>
-          <div class="kpi"><span>Alertas</span><strong id="kpiLow">0</strong></div>
-          <div class="kpi"><span>Valor estimado</span><strong id="kpiValue">R$ 0,00</strong></div>
-        </div>
-
-        <div class="grid-2">
-          <div class="panel">
-            <div class="panel-head">
-              <h3>Itens para repor</h3>
-              <span class="chip">estoque mínimo</span>
-            </div>
-            <div id="radarList" class="list"></div>
-          </div>
-
-          <div class="panel">
-            <div class="panel-head">
-              <h3>Últimos movimentos</h3>
-              <span class="chip">histórico</span>
-            </div>
-            <div id="recentMoves" class="list"></div>
-          </div>
-        </div>
-      </section>
-
-      <section id="inventoryView" class="view">
-        <div class="panel">
-          <div class="toolbar">
-            <input id="searchInput" placeholder="Buscar produto, SKU, fornecedor ou local" />
-            <select id="categoryFilter"><option value="all">Todas categorias</option></select>
-            <select id="sortSelect">
-              <option value="name">Nome</option>
-              <option value="qtyAsc">Menor estoque</option>
-              <option value="qtyDesc">Maior estoque</option>
-              <option value="valueDesc">Maior valor</option>
-            </select>
-            <button id="clearFiltersBtn" class="ghost" type="button">Limpar</button>
-          </div>
-
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Produto</th>
-                  <th>Categoria</th>
-                  <th>Local</th>
-                  <th>Qtd.</th>
-                  <th>Mín.</th>
-                  <th>Preço</th>
-                  <th>Situação</th>
-                  <th>Ações</th>
-                </tr>
-              </thead>
-              <tbody id="productRows"></tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <section id="movesView" class="view">
-        <div class="grid-2">
-          <div class="panel">
-            <div class="panel-head">
-              <h3>Registrar movimento</h3>
-              <span class="chip">entrada / saída</span>
-            </div>
-
-            <form id="moveForm">
-              <div class="field">
-                <label for="moveProduct">Produto</label>
-                <select id="moveProduct" required></select>
-              </div>
-
-              <div class="row">
-                <div class="field">
-                  <label for="moveType">Tipo</label>
-                  <select id="moveType">
-                    <option value="in">Entrada</option>
-                    <option value="out">Saída</option>
-                    <option value="set">Ajustar saldo final</option>
-                  </select>
-                </div>
-
-                <div class="field">
-                  <label for="moveQty">Quantidade</label>
-                  <input id="moveQty" type="number" min="0" step="1" required />
-                </div>
-              </div>
-
-              <div class="field">
-                <label for="moveReason">Motivo</label>
-                <input id="moveReason" placeholder="Compra, venda, perda, conferência..." />
-              </div>
-
-              <div id="withdrawPersonFields" class="withdraw-fields" hidden>
-                <div class="field">
-                  <label for="moveEmployee">Quem retirou</label>
-                  <select id="moveEmployee">
-                    <option value="">Selecionar funcionário cadastrado</option>
-                  </select>
-                </div>
-
-                <div class="row">
-                  <div class="field">
-                    <label for="moveEmployeeRegistration">Matrícula</label>
-                    <input id="moveEmployeeRegistration" placeholder="Ex.: 1042" />
-                  </div>
-
-                  <div class="field">
-                    <label for="moveEmployeeName">Nome</label>
-                    <input id="moveEmployeeName" placeholder="Nome de quem pegou" />
-                  </div>
-                </div>
-              </div>
-
-              <button class="primary" type="submit">Salvar movimento</button>
-            </form>
-          </div>
-
-          <div class="panel">
-            <div class="panel-head">
-              <h3>Linha do tempo</h3>
-              <button id="clearMovesBtn" class="mini" type="button">Limpar histórico</button>
-            </div>
-            <div id="movesTimeline" class="list"></div>
-          </div>
-        </div>
-      </section>
-
-      <section id="employeesView" class="view">
-        <div class="grid-2">
-          <div class="panel">
-            <div class="panel-head">
-              <h3>Cadastrar funcionário</h3>
-              <span class="chip">matrícula</span>
-            </div>
-
-            <form id="employeeForm">
-              <div class="field">
-                <label for="employeeRegistration">Matrícula</label>
-                <input id="employeeRegistration" required />
-              </div>
-
-              <div class="field">
-                <label for="employeeName">Nome</label>
-                <input id="employeeName" required />
-              </div>
-
-              <button class="primary" type="submit">Salvar funcionário</button>
-            </form>
-          </div>
-
-          <div class="panel">
-            <div class="panel-head">
-              <h3>Funcionários</h3>
-              <span id="employeeCount" class="chip">0 cadastrados</span>
-            </div>
-
-            <div id="employeeList" class="list"></div>
-          </div>
-        </div>
-      </section>
-
-      <section id="settingsView" class="view">
-        <div class="grid-2">
-          <div class="panel">
-            <h3>Cópia local</h3>
-            <p class="muted">Baixe uma cópia JSON ou CSV do estoque conectado ao seu usuário.</p>
-            <div class="actions">
-              <button id="exportJsonBtn" class="primary" type="button">Exportar JSON</button>
-              <button id="exportCsvBtn" class="ghost" type="button">Exportar CSV</button>
-            </div>
-          </div>
-
-          <div class="panel">
-            <h3>Área sensível</h3>
-            <p class="muted">Apaga produtos e movimentações apenas do usuário conectado.</p>
-            <button id="wipeBtn" class="danger" type="button">Zerar meu estoque</button>
-          </div>
-        </div>
-      </section>
-    </main>
-  </div>
-
-  <div id="productDrawer" class="drawer">
-    <div class="drawer-backdrop" data-close-drawer></div>
-
-    <div class="drawer-panel">
-      <div class="drawer-head">
-        <h3 id="drawerTitle">Novo produto</h3>
-        <button class="ghost" type="button" data-close-drawer>Fechar</button>
-      </div>
-
-      <form id="productForm">
-        <input id="productId" type="hidden" />
-
-        <div class="field">
-          <label for="productName">Nome do produto</label>
-          <input id="productName" required />
-        </div>
-
-        <div class="row">
-          <div class="field">
-            <label for="productSku">SKU</label>
-            <input id="productSku" required />
-          </div>
-
-          <div class="field">
-            <label for="productCategory">Categoria</label>
-            <input id="productCategory" required />
-          </div>
-        </div>
-
-        <div class="row">
-          <div class="field">
-            <label for="productQty">Quantidade</label>
-            <input id="productQty" type="number" min="0" step="1" required />
-          </div>
-
-          <div class="field">
-            <label for="productMin">Estoque mínimo</label>
-            <input id="productMin" type="number" min="0" step="1" required />
-          </div>
-        </div>
-
-        <div class="row">
-          <div class="field">
-            <label for="productPrice">Preço unitário</label>
-            <input id="productPrice" type="number" min="0" step="0.01" required />
-          </div>
-
-          <div class="field">
-            <label for="productLocation">Local</label>
-            <input id="productLocation" placeholder="Prateleira A3" />
-          </div>
-        </div>
-
-        <div class="field">
-          <label for="productSupplier">Fornecedor</label>
-          <input id="productSupplier" />
-        </div>
-
-        <div class="field">
-          <label for="productNote">Observações</label>
-          <textarea id="productNote"></textarea>
-        </div>
-
-        <div class="actions">
-          <button id="skuBtn" class="ghost" type="button">Gerar SKU</button>
-          <button class="primary" type="submit">Salvar produto</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <div id="toast" class="toast"></div>
-
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-  <script>
-    const SUPABASE_URL = "https://awvrrwebckjhdrkmaijf.supabase.co";
-    const SUPABASE_KEY = "sb_publishable_8XATeHSq0vXyYdyq1_Ysyg_lygrUCSs";
-
-    const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-    const $ = selector => document.querySelector(selector);
-    const $$ = selector => [...document.querySelectorAll(selector)];
-
-    let currentUser = null;
-    let products = [];
-    let movements = [];
-    let employees = [];
-    let filters = { q: "", category: "all", sort: "name" };
-
-    const money = value => Number(value || 0).toLocaleString("pt-BR", {
-      style: "currency",
-      currency: "BRL"
-    });
-
-    const number = value => Number(value || 0).toLocaleString("pt-BR");
-
-    function showToast(text) {
-      $("#toast").textContent = text;
-      $("#toast").classList.add("show");
-      setTimeout(() => $("#toast").classList.remove("show"), 2800);
-    }
-
-    function showAuthMessage(text, ok = false) {
-      $("#authMessage").textContent = text;
-      $("#authMessage").style.color = ok ? "var(--ok)" : "var(--danger)";
-    }
-
-    function escapeHtml(value) {
-      return String(value ?? "").replace(/[&<>"']/g, char => ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#039;"
-      }[char]));
-    }
-
-    function jsString(value) {
-      return escapeHtml(JSON.stringify(String(value ?? "")));
-    }
-
-    function generateSku() {
-      const base = ($("#productName").value || "PROD")
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^a-zA-Z0-9]/g, "")
-        .slice(0, 4)
-        .toUpperCase()
-        .padEnd(4, "X");
-
-      return `${base}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
-    }
-
-    function employeeStorageKey() {
-      return `backbox:employees:${currentUser?.id || "local"}`;
-    }
-
-    function loadEmployees() {
-      try {
-        employees = JSON.parse(localStorage.getItem(employeeStorageKey())) || [];
-      } catch (_error) {
-        employees = [];
-      }
-    }
-
-    function saveEmployees() {
-      localStorage.setItem(employeeStorageKey(), JSON.stringify(employees));
-    }
-
-    function sortedEmployees() {
-      return [...employees].sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
-    }
-
-    function employeeByRegistration(registration) {
-      const clean = String(registration || "").trim().toLowerCase();
-      return employees.find(employee => String(employee.registration || "").toLowerCase() === clean);
-    }
-
-    function buildWithdrawReason(baseReason, registration, name) {
-      const reason = baseReason || "Saída manual";
-      const cleanRegistration = String(registration || "").trim();
-      const cleanName = String(name || "").trim();
-
-      if (!cleanRegistration && !cleanName) return reason;
-
-      const person = cleanName || "Funcionário sem nome";
-      const badge = cleanRegistration ? `matrícula ${cleanRegistration}` : "sem matrícula";
-      return `${reason} · Retirado por ${person} (${badge})`;
-    }
-
-    function setAuthMode(mode) {
-      const login = mode === "login";
-      $("#loginForm").hidden = !login;
-      $("#registerForm").hidden = login;
-      $("#loginTab").classList.toggle("active", login);
-      $("#registerTab").classList.toggle("active", !login);
-      showAuthMessage("");
-    }
-
-    async function register(event) {
-      event.preventDefault();
-
-      const company = $("#companyName").value.trim();
-      const username = $("#username").value.trim();
-      const email = $("#registerEmail").value.trim();
-      const password = $("#registerPassword").value;
-      const password2 = $("#registerPassword2").value;
-
-      if (password.length < 6) return showAuthMessage("A senha precisa ter pelo menos 6 caracteres.");
-      if (password !== password2) return showAuthMessage("As senhas não conferem.");
-
-      const { data, error } = await db.auth.signUp({
-        email,
-        password,
-        options: {
-          data: { company, username }
-        }
-      });
-
-      if (error) return showAuthMessage(error.message);
-
-      if (!data.session) {
-        showAuthMessage("Conta criada. Confirme o e-mail antes de entrar, ou desative Confirm email no Supabase.", true);
-        setAuthMode("login");
-        return;
-      }
-
-      currentUser = data.user;
-      await enterApp();
-    }
-
-    async function login(event) {
-      event.preventDefault();
-
-      const email = $("#loginEmail").value.trim();
-      const password = $("#loginPassword").value;
-
-      const { data, error } = await db.auth.signInWithPassword({ email, password });
-
-      if (error) return showAuthMessage(error.message);
-
-      currentUser = data.user;
-      await enterApp();
-    }
-
-    async function logout() {
-      await db.auth.signOut();
-      currentUser = null;
-      products = [];
-      movements = [];
-      employees = [];
-      $("#app").hidden = true;
-      $("#authScreen").hidden = false;
-      setAuthMode("login");
-    }
-
-    async function enterApp() {
-      $("#authScreen").hidden = true;
-      $("#app").hidden = false;
-
-      const meta = currentUser.user_metadata || {};
-      $("#companyLabel").textContent = meta.company || "BackBox";
-      $("#userLabel").textContent = meta.username ? `@${meta.username}` : currentUser.email;
-      loadEmployees();
-
-      await loadCloudData();
-    }
-
-    async function boot() {
-      const { data } = await db.auth.getSession();
-
-      if (data.session?.user) {
-        currentUser = data.session.user;
-        await enterApp();
-      }
-
-      db.auth.onAuthStateChange(async (_event, session) => {
-        if (session?.user && !currentUser) {
-          currentUser = session.user;
-          await enterApp();
-        }
-      });
-    }
-
-    async function loadCloudData() {
-      if (!currentUser) return;
-
-      const [productsResult, movementsResult] = await Promise.all([
-        db.from("products").select("*").order("created_at", { ascending: false }),
-        db.from("movements").select("*").order("created_at", { ascending: false }).limit(200)
-      ]);
-
-      if (productsResult.error) {
-        showToast(productsResult.error.message);
-        return;
-      }
-
-      if (movementsResult.error) {
-        showToast(movementsResult.error.message);
-        return;
-      }
-
-      products = productsResult.data || [];
-      movements = movementsResult.data || [];
-      renderAll();
-    }
-
-    function statusFor(product) {
-      if (product.qty <= 0) return { label: "Zerado", className: "danger" };
-      if (product.qty <= product.min_qty) return { label: "Repor", className: "warn" };
-      return { label: "Saudável", className: "ok" };
-    }
-
-    function categories() {
-      return [...new Set(products.map(p => p.category).filter(Boolean))].sort();
-    }
-
-    function filteredProducts() {
-      const q = filters.q.toLowerCase();
-
-      const list = products.filter(product => {
-        const text = [
-          product.name,
-          product.sku,
-          product.category,
-          product.location,
-          product.supplier
-        ].join(" ").toLowerCase();
-
-        const categoryOk = filters.category === "all" || product.category === filters.category;
-        return categoryOk && text.includes(q);
-      });
-
-      const sorters = {
-        name: (a, b) => a.name.localeCompare(b.name),
-        qtyAsc: (a, b) => a.qty - b.qty,
-        qtyDesc: (a, b) => b.qty - a.qty,
-        valueDesc: (a, b) => (b.qty * b.price) - (a.qty * a.price)
-      };
-
-      return list.sort(sorters[filters.sort]);
-    }
-
-    function renderAll() {
-      renderDashboard();
-      renderProducts();
-      renderCategories();
-      renderMoveOptions();
-      renderEmployeeOptions();
-      renderEmployees();
-      toggleWithdrawFields();
-      renderMovements();
-    }
-
-    function renderDashboard() {
-      const totalProducts = products.length;
-      const totalUnits = products.reduce((sum, p) => sum + Number(p.qty || 0), 0);
-      const totalLow = products.filter(p => p.qty <= p.min_qty).length;
-      const totalValue = products.reduce((sum, p) => sum + Number(p.qty || 0) * Number(p.price || 0), 0);
-
-      $("#kpiProducts").textContent = number(totalProducts);
-      $("#kpiUnits").textContent = number(totalUnits);
-      $("#kpiLow").textContent = number(totalLow);
-      $("#kpiValue").textContent = money(totalValue);
-
-      const radar = [...products]
-        .sort((a, b) => (a.qty / Math.max(a.min_qty, 1)) - (b.qty / Math.max(b.min_qty, 1)))
-        .slice(0, 6);
-
-      $("#radarList").innerHTML = radar.length ? radar.map(product => {
-        const health = product.min_qty > 0 ? Math.min(100, Math.round((product.qty / product.min_qty) * 100)) : 100;
-        const status = statusFor(product);
-        const barClass = product.qty <= 0 ? "danger" : product.qty <= product.min_qty ? "warn" : "";
-
-        return `
-          <div class="radar-item">
-            <div class="radar-top">
-              <strong>${escapeHtml(product.name)}</strong>
-              <span class="chip ${status.className}">${status.label}</span>
-            </div>
-            <div class="bar ${barClass}"><span style="width:${health}%"></span></div>
-            <span class="muted">${escapeHtml(product.sku)} · ${number(product.qty)} un. · mínimo ${number(product.min_qty)}</span>
-          </div>
-        `;
-      }).join("") : `<div class="empty">Nenhum produto cadastrado.</div>`;
-
-      $("#recentMoves").innerHTML = movements.length
-        ? movements.slice(0, 5).map(moveCard).join("")
-        : `<div class="empty">Nenhuma movimentação ainda.</div>`;
-    }
-
-    function renderProducts() {
-      const rows = filteredProducts();
-
-      $("#productRows").innerHTML = rows.length ? rows.map(product => {
-        const status = statusFor(product);
-
-        return `
-          <tr>
-            <td>
-              <div class="product-name">${escapeHtml(product.name)}</div>
-              <div class="sku">${escapeHtml(product.sku)}</div>
-            </td>
-            <td>${escapeHtml(product.category)}</td>
-            <td>${escapeHtml(product.location || "-")}</td>
-            <td><strong>${number(product.qty)}</strong></td>
-            <td>${number(product.min_qty)}</td>
-            <td>${money(product.price)}</td>
-            <td><span class="chip ${status.className}">${status.label}</span></td>
-            <td>
-              <div class="actions">
-                <button class="mini" type="button" onclick="quickMove('${product.id}', 'in')">+ Entrada</button>
-                <button class="mini" type="button" onclick="quickMove('${product.id}', 'out')">- Saída</button>
-                <button class="mini" type="button" onclick="editProduct('${product.id}')">Editar</button>
-                <button class="mini" type="button" onclick="deleteProduct('${product.id}')">Excluir</button>
-              </div>
-            </td>
-          </tr>
-        `;
-      }).join("") : `
-        <tr>
-          <td colspan="8"><div class="empty">Nenhum produto encontrado.</div></td>
-        </tr>
-      `;
-    }
-
-    function renderCategories() {
-      const selected = filters.category;
-      $("#categoryFilter").innerHTML = `
-        <option value="all">Todas categorias</option>
-        ${categories().map(cat => `<option value="${escapeHtml(cat)}">${escapeHtml(cat)}</option>`).join("")}
-      `;
-      $("#categoryFilter").value = selected;
-    }
-
-    function renderMoveOptions() {
-      $("#moveProduct").innerHTML = products.length
-        ? products.map(p => `<option value="${p.id}">${escapeHtml(p.name)} · ${escapeHtml(p.sku)}</option>`).join("")
-        : `<option value="">Cadastre um produto primeiro</option>`;
-    }
-
-    function renderEmployeeOptions() {
-      const options = sortedEmployees()
-        .map(employee => `<option value="${escapeHtml(employee.registration)}">${escapeHtml(employee.name)} · ${escapeHtml(employee.registration)}</option>`)
-        .join("");
-
-      $("#moveEmployee").innerHTML = `
-        <option value="">Selecionar funcionário cadastrado</option>
-        ${options}
-      `;
-    }
-
-    function renderEmployees() {
-      $("#employeeCount").textContent = `${number(employees.length)} ${employees.length === 1 ? "cadastrado" : "cadastrados"}`;
-
-      $("#employeeList").innerHTML = employees.length ? sortedEmployees().map(employee => `
-        <div class="employee-item">
           <div>
-            <strong>${escapeHtml(employee.name)}</strong>
-            <span class="muted">Matrícula ${escapeHtml(employee.registration)}</span>
+            <strong>Suporte técnico</strong>
+
+            <p>
+              Em caso de dúvidas ou problemas de acesso,
+              entre em contato com o administrador do sistema.
+            </p>
           </div>
-          <button class="mini" type="button" onclick="deleteEmployee(${jsString(employee.registration)})">Excluir</button>
         </div>
-      `).join("") : `<div class="empty">Nenhum funcionário cadastrado.</div>`;
-    }
 
-    function fillEmployeeFromSelect() {
-      const employee = employeeByRegistration($("#moveEmployee").value);
-      if (!employee) return;
+      </div>
 
-      $("#moveEmployeeRegistration").value = employee.registration;
-      $("#moveEmployeeName").value = employee.name;
-    }
+      <div class="auth-footer">
+        © 2026 BackBox ERP • Plataforma corporativa de gestão
+      </div>
 
-    function toggleWithdrawFields() {
-      const isOut = $("#moveType").value === "out";
-      $("#withdrawPersonFields").hidden = !isOut;
+    </div>
 
-      if (!isOut) {
-        $("#moveEmployee").value = "";
-        $("#moveEmployeeRegistration").value = "";
-        $("#moveEmployeeName").value = "";
-      }
-    }
+    <!-- RIGHT -->
+    <div class="auth-right">
 
-    function saveEmployee(event) {
-      event.preventDefault();
+      <div class="overlay"></div>
 
-      const registration = $("#employeeRegistration").value.trim();
-      const name = $("#employeeName").value.trim();
+      <div class="right-content">
 
-      if (!registration || !name) return showToast("Preencha matrícula e nome.");
+        <div class="right-badge">
+          Plataforma Corporativa
+        </div>
 
-      const existing = employeeByRegistration(registration);
-      if (existing) {
-        existing.name = name;
-        existing.updatedAt = new Date().toISOString();
-        showToast("Funcionário atualizado.");
-      } else {
-        employees.push({
-          registration,
-          name,
-          createdAt: new Date().toISOString()
-        });
-        showToast("Funcionário cadastrado.");
-      }
+        <h2>
+          Gestão inteligente de estoque,
+          armazenagem e movimentação.
+        </h2>
 
-      saveEmployees();
-      $("#employeeForm").reset();
-      renderEmployees();
-      renderEmployeeOptions();
-    }
+        <p>
+          Solução empresarial desenvolvida para operações
+          logísticas, almoxarifados e controle de materiais.
+        </p>
 
-    function deleteEmployee(registration) {
-      const employee = employeeByRegistration(registration);
-      if (!employee) return;
+        <div class="features">
 
-      if (!confirm(`Excluir "${employee.name}" do cadastro de funcionários?`)) return;
-
-      employees = employees.filter(item => item.registration !== employee.registration);
-      saveEmployees();
-      renderEmployees();
-      renderEmployeeOptions();
-      showToast("Funcionário removido.");
-    }
-
-    function moveCard(move) {
-      const typeClass = move.type === "Saída" ? "danger" : move.type === "Entrada" ? "ok" : "warn";
-
-      return `
-        <div class="timeline-item">
-          <div class="timeline-date">${new Date(move.created_at).toLocaleString("pt-BR")}</div>
-          <div>
-            <strong>${escapeHtml(move.product_name)}</strong>
-            <div class="muted">${escapeHtml(move.reason || "Sem motivo")} · ${number(move.before_qty)} → ${number(move.after_qty)}</div>
+          <div class="feature">
+            <strong>Controle de estoque</strong>
+            <span>Entradas, saídas e rastreabilidade</span>
           </div>
-          <span class="chip ${typeClass}">${move.type} ${number(move.qty)}</span>
+
+          <div class="feature">
+            <strong>Gestão operacional</strong>
+            <span>Controle completo do almoxarifado</span>
+          </div>
+
+          <div class="feature">
+            <strong>Ambiente seguro</strong>
+            <span>Acesso corporativo protegido</span>
+          </div>
+
         </div>
-      `;
-    }
-
-    function renderMovements() {
-      $("#movesTimeline").innerHTML = movements.length
-        ? movements.map(moveCard).join("")
-        : `<div class="empty">Nenhuma movimentação registrada.</div>`;
-    }
-
-    function switchView(id) {
-      $$(".view").forEach(view => view.classList.remove("active"));
-      $(`#${id}`).classList.add("active");
-
-      $$(".nav button").forEach(button => {
-        button.classList.toggle("active", button.dataset.view === id);
-      });
-
-      const titles = {
-        dashboardView: ["Painel", "Visão do estoque, reposições e movimentações do dia."],
-        inventoryView: ["Estoque", "Produtos, alertas e ações rápidas."],
-        movesView: ["Movimentos", "Entradas, saídas e ajustes do almoxarifado."],
-        employeesView: ["Funcionários", "Cadastro usado para identificar quem retirou produtos."],
-        settingsView: ["Ajustes", "Cópias, exportação e limpeza dos seus dados."]
-      };
-
-      $("#pageTitle").textContent = titles[id][0];
-      $("#pageSubtitle").textContent = titles[id][1];
-    }
-
-    function openDrawer() {
-      $("#productDrawer").classList.add("open");
-    }
-
-    function closeDrawer() {
-      $("#productDrawer").classList.remove("open");
-    }
-
-    function resetProductForm() {
-      $("#productForm").reset();
-      $("#productId").value = "";
-      $("#drawerTitle").textContent = "Novo produto";
-      $("#productSku").value = generateSku();
-    }
-
-    function editProduct(id) {
-      const product = products.find(p => p.id === id);
-      if (!product) return;
-
-      $("#drawerTitle").textContent = "Editar produto";
-      $("#productId").value = product.id;
-      $("#productName").value = product.name;
-      $("#productSku").value = product.sku;
-      $("#productCategory").value = product.category;
-      $("#productQty").value = product.qty;
-      $("#productMin").value = product.min_qty;
-      $("#productPrice").value = product.price;
-      $("#productLocation").value = product.location || "";
-      $("#productSupplier").value = product.supplier || "";
-      $("#productNote").value = product.note || "";
-      openDrawer();
-    }
-
-    async function saveProduct(event) {
-      event.preventDefault();
-
-      const id = $("#productId").value;
-      const old = products.find(p => p.id === id);
-
-      const payload = {
-        user_id: currentUser.id,
-        name: $("#productName").value.trim(),
-        sku: $("#productSku").value.trim().toUpperCase(),
-        category: $("#productCategory").value.trim(),
-        qty: Number($("#productQty").value),
-        min_qty: Number($("#productMin").value),
-        price: Number($("#productPrice").value),
-        location: $("#productLocation").value.trim(),
-        supplier: $("#productSupplier").value.trim(),
-        note: $("#productNote").value.trim(),
-        updated_at: new Date().toISOString()
-      };
-
-      if (!payload.name || !payload.sku || !payload.category) return showToast("Preencha nome, SKU e categoria.");
-
-      if (id) {
-        const { data, error } = await db
-          .from("products")
-          .update(payload)
-          .eq("id", id)
-          .eq("user_id", currentUser.id)
-          .select()
-          .single();
-
-        if (error) return showToast(error.message);
-
-        if (old && old.qty !== data.qty) {
-          await addMovement(data, "Ajuste", Math.abs(data.qty - old.qty), old.qty, data.qty, "Edição manual");
-        }
-
-        showToast("Produto atualizado na nuvem.");
-      } else {
-        const { data, error } = await db
-          .from("products")
-          .insert(payload)
-          .select()
-          .single();
-
-        if (error) return showToast(error.message);
-
-        await addMovement(data, "Entrada", data.qty, 0, data.qty, "Cadastro inicial");
-        showToast("Produto criado na nuvem.");
-      }
-
-      closeDrawer();
-      resetProductForm();
-      await loadCloudData();
-    }
-
-    async function addMovement(product, type, qty, beforeQty, afterQty, reason) {
-      const { error } = await db.from("movements").insert({
-        user_id: currentUser.id,
-        product_id: product.id,
-        product_name: product.name,
-        sku: product.sku,
-        type,
-        qty: Number(qty || 0),
-        before_qty: Number(beforeQty || 0),
-        after_qty: Number(afterQty || 0),
-        reason
-      });
-
-      if (error) showToast(error.message);
-    }
-
-    function askWithdrawPerson() {
-      const registrationInput = prompt("Matrícula de quem retirou o produto:");
-      if (registrationInput === null) return { registration: "", name: "" };
-
-      const registration = registrationInput.trim();
-      const employee = employeeByRegistration(registration);
-      if (employee) return { registration, name: employee.name };
-
-      const nameInput = prompt("Nome de quem retirou o produto:");
-      const name = employee
-        ? employee.name
-        : (nameInput || "").trim();
-
-      return { registration, name };
-    }
-
-    async function quickMove(id, type) {
-      const product = products.find(p => p.id === id);
-      if (!product) return;
-
-      const qty = Number(prompt(`Quantidade para ${type === "in" ? "entrada" : "saída"}:`));
-      if (!Number.isFinite(qty) || qty <= 0) return;
-
-      const beforeQty = product.qty;
-      const afterQty = type === "in" ? beforeQty + qty : Math.max(0, beforeQty - qty);
-      const label = type === "in" ? "Entrada" : "Saída";
-      let reason = "Ação rápida";
-
-      if (type === "out") {
-        const person = askWithdrawPerson();
-        reason = buildWithdrawReason(reason, person.registration, person.name);
-      }
-
-      const { data, error } = await db
-        .from("products")
-        .update({ qty: afterQty, updated_at: new Date().toISOString() })
-        .eq("id", product.id)
-        .eq("user_id", currentUser.id)
-        .select()
-        .single();
-
-      if (error) return showToast(error.message);
-
-      await addMovement(data, label, qty, beforeQty, afterQty, reason);
-      await loadCloudData();
-    }
-
-    async function deleteProduct(id) {
-      const product = products.find(p => p.id === id);
-      if (!product) return;
-
-      if (!confirm(`Excluir "${product.name}" do estoque?`)) return;
-
-      const { error } = await db
-        .from("products")
-        .delete()
-        .eq("id", id)
-        .eq("user_id", currentUser.id);
-
-      if (error) return showToast(error.message);
-
-      showToast("Produto excluído.");
-      await loadCloudData();
-    }
-
-    async function submitMove(event) {
-      event.preventDefault();
-
-      const product = products.find(p => p.id === $("#moveProduct").value);
-      if (!product) return showToast("Cadastre um produto primeiro.");
-
-      const type = $("#moveType").value;
-      const qty = Number($("#moveQty").value);
-      let reason = $("#moveReason").value.trim() || "Movimentação manual";
-
-      if (!Number.isFinite(qty) || qty < 0) return showToast("Quantidade inválida.");
-
-      const beforeQty = product.qty;
-      let afterQty = beforeQty;
-      let label = "Ajuste";
-
-      if (type === "in") {
-        afterQty = beforeQty + qty;
-        label = "Entrada";
-      }
-
-      if (type === "out") {
-        afterQty = Math.max(0, beforeQty - qty);
-        label = "Saída";
-        reason = buildWithdrawReason(
-          reason,
-          $("#moveEmployeeRegistration").value,
-          $("#moveEmployeeName").value
-        );
-      }
-
-      if (type === "set") {
-        afterQty = qty;
-        label = "Ajuste";
-      }
-
-      const { data, error } = await db
-        .from("products")
-        .update({ qty: afterQty, updated_at: new Date().toISOString() })
-        .eq("id", product.id)
-        .eq("user_id", currentUser.id)
-        .select()
-        .single();
-
-      if (error) return showToast(error.message);
-
-      await addMovement(data, label, qty, beforeQty, afterQty, reason);
-      $("#moveForm").reset();
-      toggleWithdrawFields();
-      await loadCloudData();
-      showToast("Movimentação salva.");
-    }
-
-    async function seedData() {
-      if (products.length && !confirm("Adicionar exemplo junto aos produtos atuais?")) return;
-
-      const sample = [
-        ["Café Especial 500g", "Alimentos", 38, 12, 24.9, "A1", "Torra Norte"],
-        ["Leite Integral 1L", "Bebidas", 22, 30, 5.79, "B2", "Laticínios Serra"],
-        ["Sabonete Neutro", "Higiene", 9, 18, 3.49, "C4", "Dermalab"],
-        ["Arroz Tipo 1 5kg", "Alimentos", 16, 10, 31.9, "A2", "Campo Sul"],
-        ["Detergente Limão", "Limpeza", 4, 14, 2.99, "D1", "Casa Clara"]
-      ];
-
-      for (const item of sample) {
-        const payload = {
-          user_id: currentUser.id,
-          name: item[0],
-          sku: `${item[0].slice(0, 4).toUpperCase().replace(/\s/g, "")}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`,
-          category: item[1],
-          qty: item[2],
-          min_qty: item[3],
-          price: item[4],
-          location: item[5],
-          supplier: item[6],
-          note: ""
-        };
-
-        const { data, error } = await db.from("products").insert(payload).select().single();
-        if (!error) await addMovement(data, "Entrada", data.qty, 0, data.qty, "Carga de exemplo");
-      }
-
-      await loadCloudData();
-      showToast("Exemplos carregados.");
-    }
-
-    async function clearMoves() {
-      if (!confirm("Limpar todo o histórico de movimentações?")) return;
-
-      const { error } = await db
-        .from("movements")
-        .delete()
-        .eq("user_id", currentUser.id);
-
-      if (error) return showToast(error.message);
-
-      await loadCloudData();
-      showToast("Histórico limpo.");
-    }
-
-    async function wipeData() {
-      if (!confirm("Zerar todos os produtos e movimentos deste usuário?")) return;
-
-      await db.from("movements").delete().eq("user_id", currentUser.id);
-      const { error } = await db.from("products").delete().eq("user_id", currentUser.id);
-
-      if (error) return showToast(error.message);
-
-      await loadCloudData();
-      showToast("Estoque zerado.");
-    }
-
-    function exportJson() {
-      download(new Blob([JSON.stringify({
-        exportedAt: new Date().toISOString(),
-        user: currentUser.email,
-        products,
-        movements,
-        employees
-      }, null, 2)], { type: "application/json" }), "backup-estoque.json");
-    }
-
-    function exportCsv() {
-      const header = ["Produto", "SKU", "Categoria", "Local", "Quantidade", "Minimo", "Preco", "Fornecedor", "Situacao"];
-
-      const rows = products.map(p => [
-        p.name,
-        p.sku,
-        p.category,
-        p.location || "",
-        p.qty,
-        p.min_qty,
-        p.price,
-        p.supplier || "",
-        statusFor(p).label
-      ]);
-
-      const csv = [header, ...rows]
-        .map(row => row.map(cell => `"${String(cell).replaceAll('"', '""')}"`).join(";"))
-        .join("\n");
-
-      download(new Blob([csv], { type: "text/csv;charset=utf-8" }), "estoque.csv");
-    }
-
-    function download(blob, filename) {
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = filename;
-      link.click();
-      URL.revokeObjectURL(link.href);
-    }
-
-    $("#loginTab").addEventListener("click", () => setAuthMode("login"));
-    $("#registerTab").addEventListener("click", () => setAuthMode("register"));
-    $("#registerForm").addEventListener("submit", register);
-    $("#loginForm").addEventListener("submit", login);
-    $("#logoutBtn").addEventListener("click", logout);
-    $("#refreshBtn").addEventListener("click", loadCloudData);
-
-    $$(".nav button").forEach(button => {
-      button.addEventListener("click", () => switchView(button.dataset.view));
-    });
-
-    $("#openProductBtn").addEventListener("click", () => {
-      resetProductForm();
-      openDrawer();
-    });
-
-    $$("[data-close-drawer]").forEach(el => el.addEventListener("click", closeDrawer));
-    $("#productForm").addEventListener("submit", saveProduct);
-    $("#skuBtn").addEventListener("click", () => $("#productSku").value = generateSku());
-    $("#moveForm").addEventListener("submit", submitMove);
-    $("#moveType").addEventListener("change", toggleWithdrawFields);
-    $("#moveEmployee").addEventListener("change", fillEmployeeFromSelect);
-    $("#employeeForm").addEventListener("submit", saveEmployee);
-
-    $("#seedBtn").addEventListener("click", seedData);
-    $("#clearMovesBtn").addEventListener("click", clearMoves);
-    $("#wipeBtn").addEventListener("click", wipeData);
-    $("#exportJsonBtn").addEventListener("click", exportJson);
-    $("#exportCsvBtn").addEventListener("click", exportCsv);
-
-    $("#searchInput").addEventListener("input", event => {
-      filters.q = event.target.value;
-      renderProducts();
-    });
-
-    $("#categoryFilter").addEventListener("change", event => {
-      filters.category = event.target.value;
-      renderProducts();
-    });
-
-    $("#sortSelect").addEventListener("change", event => {
-      filters.sort = event.target.value;
-      renderProducts();
-    });
-
-    $("#clearFiltersBtn").addEventListener("click", () => {
-      filters = { q: "", category: "all", sort: "name" };
-      $("#searchInput").value = "";
-      $("#sortSelect").value = "name";
-      renderAll();
-    });
-
-    window.editProduct = editProduct;
-    window.deleteProduct = deleteProduct;
-    window.quickMove = quickMove;
-    window.deleteEmployee = deleteEmployee;
-
-    boot();
-  </script>
-</body>
-</html>
+
+      </div>
+
+    </div>
+
+  </div>
+</section>
+
+<style>
+
+:root{
+  --bg:#f4f6f8;
+  --white:#ffffff;
+  --border:#d9dee5;
+  --text:#1f2937;
+  --muted:#6b7280;
+
+  --primary:#1d4ed8;
+  --primary-dark:#1e40af;
+
+  --success:#15803d;
+  --success-dark:#166534;
+
+  --shadow:0 2px 8px rgba(0,0,0,0.06);
+}
+
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+}
+
+body{
+  font-family:
+    "Segoe UI",
+    Arial,
+    sans-serif;
+
+  background:var(--bg);
+  color:var(--text);
+}
+
+.auth-screen{
+  min-height:100vh;
+}
+
+.auth-layout{
+  min-height:100vh;
+  display:grid;
+  grid-template-columns: 480px 1fr;
+}
+
+/* =======================
+LEFT
+======================= */
+
+.auth-left{
+  background:#fff;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  padding:50px 55px;
+  border-right:1px solid var(--border);
+}
+
+.auth-header{
+  margin-bottom:30px;
+}
+
+.brand{
+  display:flex;
+  align-items:center;
+  gap:16px;
+}
+
+.brand-logo{
+  width:52px;
+  height:52px;
+
+  background:var(--primary);
+  color:#fff;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  font-weight:700;
+  font-size:18px;
+}
+
+.brand h1{
+  font-size:24px;
+  font-weight:600;
+  margin-bottom:4px;
+}
+
+.brand span{
+  color:var(--muted);
+  font-size:14px;
+}
+
+.auth-content{
+  width:100%;
+  max-width:360px;
+}
+
+.welcome{
+  margin-bottom:40px;
+}
+
+.welcome h2{
+  font-size:32px;
+  font-weight:600;
+  margin-bottom:14px;
+  color:var(--text);
+}
+
+.welcome p{
+  line-height:1.6;
+  color:var(--muted);
+  font-size:15px;
+}
+
+.login-form{
+  display:flex;
+  flex-direction:column;
+  gap:22px;
+}
+
+.field{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.field label{
+  font-size:14px;
+  font-weight:600;
+  color:#374151;
+}
+
+.field input{
+  height:48px;
+  border:1px solid var(--border);
+  background:#fff;
+  padding:0 14px;
+  font-size:15px;
+  transition:0.2s;
+}
+
+.field input:focus{
+  outline:none;
+  border-color:var(--primary);
+}
+
+.login-options{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-top:-6px;
+}
+
+.remember{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:14px;
+  color:var(--muted);
+}
+
+.login-options a{
+  color:var(--primary);
+  text-decoration:none;
+  font-size:14px;
+}
+
+.login-btn{
+  height:50px;
+  border:none;
+
+  background:var(--success);
+  color:#fff;
+
+  font-size:15px;
+  font-weight:600;
+
+  cursor:pointer;
+  transition:0.2s;
+}
+
+.login-btn:hover{
+  background:var(--success-dark);
+}
+
+.info-box{
+  margin-top:35px;
+
+  border:1px solid var(--border);
+  background:#f9fafb;
+
+  padding:18px;
+
+  display:flex;
+  gap:14px;
+}
+
+.info-icon{
+  width:28px;
+  height:28px;
+
+  background:var(--primary);
+  color:#fff;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  font-weight:700;
+  font-size:14px;
+}
+
+.info-box strong{
+  display:block;
+  margin-bottom:5px;
+  font-size:14px;
+}
+
+.info-box p{
+  color:var(--muted);
+  line-height:1.5;
+  font-size:13px;
+}
+
+.auth-footer{
+  margin-top:40px;
+  color:var(--muted);
+  font-size:13px;
+}
+
+/* =======================
+RIGHT
+======================= */
+
+.auth-right{
+  position:relative;
+
+  background-image:url('https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?q=80&w=1600&auto=format&fit=crop');
+
+  background-size:cover;
+  background-position:center;
+
+  display:flex;
+  align-items:flex-end;
+}
+
+.overlay{
+  position:absolute;
+  inset:0;
+
+  background:linear-gradient(
+    to top,
+    rgba(15,23,42,0.88),
+    rgba(15,23,42,0.35)
+  );
+}
+
+.right-content{
+  position:relative;
+  z-index:2;
+
+  max-width:700px;
+
+  padding:70px;
+  color:#fff;
+}
+
+.right-badge{
+  display:inline-block;
+
+  background:rgba(255,255,255,0.12);
+
+  border:1px solid rgba(255,255,255,0.15);
+
+  padding:8px 14px;
+
+  font-size:13px;
+  margin-bottom:24px;
+}
+
+.right-content h2{
+  font-size:44px;
+  line-height:1.2;
+  font-weight:600;
+
+  margin-bottom:20px;
+}
+
+.right-content p{
+  font-size:17px;
+  line-height:1.7;
+
+  color:rgba(255,255,255,0.85);
+
+  margin-bottom:40px;
+}
+
+.features{
+  display:grid;
+  gap:18px;
+}
+
+.feature{
+  border-left:3px solid #22c55e;
+  padding-left:16px;
+}
+
+.feature strong{
+  display:block;
+  margin-bottom:5px;
+  font-size:15px;
+}
+
+.feature span{
+  color:rgba(255,255,255,0.78);
+  font-size:14px;
+}
+
+/* =======================
+RESPONSIVO
+======================= */
+
+@media(max-width:1100px){
+
+  .auth-layout{
+    grid-template-columns:1fr;
+  }
+
+  .auth-right{
+    min-height:420px;
+  }
+
+}
+
+@media(max-width:768px){
+
+  .auth-left{
+    padding:35px 28px;
+  }
+
+  .right-content{
+    padding:35px 28px;
+  }
+
+  .right-content h2{
+    font-size:30px;
+  }
+
+  .welcome h2{
+    font-size:28px;
+  }
+
+}
+
+</style>
