@@ -1,0 +1,13 @@
+{
+  "estoque": {},
+  "funcionarios": [
+    {
+      "id": 1,
+      "nome": "joao",
+      "cargo": "aux escritorio",
+      "setor": "logi",
+      "criado_em": "2026-05-23 21:10:10"
+    }
+  ],
+  "movimentacoes": []
+}

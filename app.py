@@ -1,32 +1,14 @@
-from flask import Flask, jsonify, request
+"""
+MovStok ERP - Application entry point.
 
-app = Flask(__name__, static_folder="static")
+This file keeps backward compatibility with the existing Procfile / hosting setup
+(`gunicorn app:app` and `gunicorn "app:create_app()"`) and simply delegates to the
+real application package located in ./app/.
+"""
+from app import create_app
 
-estoque = {}
-
-@app.route("/")
-def home():
-    return app.send_static_file("index.html")
-
-@app.route("/estoque", methods=["GET"])
-def listar():
-    return jsonify(estoque), 200
-
-@app.route("/estoque", methods=["POST"])
-def adicionar():
-    data = request.json
-    nome = data.get("nome").lower()
-    quantidade = data.get("quantidade", 0)
-
-    if nome in estoque:
-        estoque[nome] += quantidade
-    else:
-        estoque[nome] = quantidade
-
-    return jsonify({
-        "mensagem": "Item atualizado!",
-        "estoque": estoque[nome]
-    }), 201
+# Backwards-compatible WSGI handle: `gunicorn app:app`
+app = create_app()
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True)

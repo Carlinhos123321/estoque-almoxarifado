@@ -1,0 +1,1 @@
+# MovStok blueprints package
