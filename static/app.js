@@ -36,16 +36,16 @@ const Pages = {
 
 const Icons = {
   dashboard: "fa-gauge-high",
-  entradas: "fa-arrow-down-to-bracket",
-  saidas: "fa-arrow-up-from-bracket",
+  entradas: "fa-truck-ramp-box",
+  saidas: "fa-dolly",
   estoque: "fa-boxes-stacked",
-  produtos: "fa-tags",
+  produtos: "fa-barcode",
   categorias: "fa-layer-group",
-  fornecedores: "fa-truck-fast",
-  funcionarios: "fa-users",
+  fornecedores: "fa-handshake",
+  funcionarios: "fa-id-badge",
   matriculas: "fa-id-card",
-  relatorios: "fa-chart-line",
-  atividades: "fa-clock-rotate-left",
+  relatorios: "fa-chart-column",
+  atividades: "fa-clipboard-list",
   usuarios: "fa-user-shield",
   configuracoes: "fa-gear",
 };
@@ -191,7 +191,7 @@ function pageHeader(page, subtitle, actions = "") {
 function emptyState(icon, title, description) {
   return `
     <div class="empty-state">
-      <i class="fa-solid ${icon}"></i>
+      <div class="empty-illustration"><i class="fa-solid ${icon}"></i></div>
       <h4>${escapeHtml(title)}</h4>
       <p>${escapeHtml(description)}</p>
     </div>
@@ -466,7 +466,16 @@ function renderLineChart(canvasId, labels, entries, outputs) {
       maintainAspectRatio: false,
       interaction: { intersect: false, mode: "index" },
       plugins: {
-        legend: { position: "bottom", labels: { boxWidth: 10, boxHeight: 10, usePointStyle: true } },
+        legend: { position: "bottom", labels: { boxWidth: 10, boxHeight: 10, usePointStyle: true, padding: 18 } },
+        tooltip: {
+          backgroundColor: "#111827",
+          borderColor: "rgba(255,255,255,0.08)",
+          borderWidth: 1,
+          padding: 12,
+          titleFont: { weight: "700" },
+          bodyFont: { weight: "500" },
+          displayColors: true,
+        },
       },
       scales: {
         x: { grid: { display: false }, ticks: { color: "#6b7280" } },
@@ -495,7 +504,17 @@ function renderBarChart(canvasId, labels, data) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: "#111827",
+          borderColor: "rgba(255,255,255,0.08)",
+          borderWidth: 1,
+          padding: 12,
+          titleFont: { weight: "700" },
+          bodyFont: { weight: "500" },
+        },
+      },
       scales: {
         x: { grid: { display: false }, ticks: { color: "#6b7280" } },
         y: { beginAtZero: true, grid: { color: "rgba(148,163,184,0.18)" }, ticks: { precision: 0, color: "#6b7280" } },
@@ -605,12 +624,12 @@ async function renderDashboard() {
   pageWrap().innerHTML = `
     ${pageHeader("dashboard", "Visão executiva do almoxarifado e operação logística.")}
     <div class="kpi-grid">
-      ${kpiCard("Produtos", kpi.total_products, "Cadastrados no catálogo", "fa-tags")}
+      ${kpiCard("Produtos", kpi.total_products, "Cadastrados no catálogo", "fa-barcode")}
       ${kpiCard("Estoque atual", fmtQty(kpi.total_units), "Unidades totais", "fa-boxes-stacked", "green")}
       ${kpiCard("Valor em estoque", fmtMoney(kpi.inventory_value), "Custo contábil", "fa-sack-dollar", "cyan")}
       ${kpiCard("Alertas", Number(kpi.low_stock || 0) + Number(kpi.out_stock || 0), "Baixo ou zerado", "fa-triangle-exclamation", "amber")}
-      ${kpiCard("Entradas hoje", kpi.entries_today, "Recebimentos", "fa-arrow-down-to-bracket", "green")}
-      ${kpiCard("Saídas hoje", kpi.outputs_today, "Requisições atendidas", "fa-arrow-up-from-bracket", "red")}
+      ${kpiCard("Entradas hoje", kpi.entries_today, "Recebimentos", "fa-truck-ramp-box", "green")}
+      ${kpiCard("Saídas hoje", kpi.outputs_today, "Requisições atendidas", "fa-dolly", "red")}
     </div>
 
     <div class="grid-2">
@@ -711,20 +730,48 @@ function activityList(items) {
     return emptyState("fa-clock-rotate-left", "Sem atividades", "As ações auditadas aparecerão aqui.");
   }
   return `
-    <table class="data-table">
-      <tbody>
-        ${items.map((item) => `
-          <tr>
-            <td>
-              <strong>${escapeHtml(item.description || item.entity)}</strong>
-              <div class="text-muted">${escapeHtml(item.user?.name || "Sistema")} · ${escapeHtml(item.action)}</div>
-            </td>
-            <td class="text-right text-muted">${fmtDate(item.created_at)}</td>
-          </tr>
-        `).join("")}
-      </tbody>
-    </table>
+    <div class="activity-timeline">
+      ${items.map((item) => `
+        <div class="activity-item">
+          <div class="activity-marker"><i class="fa-solid ${activityIcon(item.action)}"></i></div>
+          <div class="activity-content">
+            <div class="activity-main">${escapeHtml(item.description || item.entity)}</div>
+            <div class="activity-meta">
+              <span>${escapeHtml(item.user?.name || "Sistema")}</span>
+              <span>${escapeHtml(actionLabel(item.action))}</span>
+            </div>
+          </div>
+          <time>${fmtDate(item.created_at)}</time>
+        </div>
+      `).join("")}
+    </div>
   `;
+}
+
+function activityIcon(action) {
+  return ({
+    login: "fa-right-to-bracket",
+    logout: "fa-right-from-bracket",
+    create: "fa-plus",
+    update: "fa-pen",
+    delete: "fa-ban",
+    entry: "fa-truck-ramp-box",
+    output: "fa-dolly",
+    password_reset_request: "fa-key",
+  })[action] || "fa-clipboard-check";
+}
+
+function actionLabel(action) {
+  return ({
+    login: "Login",
+    logout: "Logout",
+    create: "Criação",
+    update: "Atualização",
+    delete: "Exclusão",
+    entry: "Entrada",
+    output: "Saída",
+    password_reset_request: "Recuperação de senha",
+  })[action] || action || "Atividade";
 }
 
 async function renderProducts(params = {}) {
@@ -2207,6 +2254,13 @@ function openChangePasswordModal() {
 }
 
 function bindShellEvents() {
+  const sidebar = $("#sidebar");
+  const sidebarBackdrop = $("#sidebar-backdrop");
+  const closeSidebarDrawer = () => {
+    sidebar.classList.remove("show-mobile");
+    sidebarBackdrop?.classList.remove("show");
+  };
+
   $("#login-form").addEventListener("submit", async (event) => {
     event.preventDefault();
     const button = event.currentTarget.querySelector("button[type='submit']");
@@ -2237,7 +2291,7 @@ function bindShellEvents() {
 
   $all(".menu-item").forEach((item) => {
     item.addEventListener("click", () => {
-      $("#sidebar").classList.remove("show-mobile");
+      closeSidebarDrawer();
       navigate(item.dataset.page);
     });
   });
@@ -2247,8 +2301,11 @@ function bindShellEvents() {
   });
 
   $("#mobile-menu").addEventListener("click", () => {
-    $("#sidebar").classList.toggle("show-mobile");
+    sidebar.classList.toggle("show-mobile");
+    sidebarBackdrop?.classList.toggle("show", sidebar.classList.contains("show-mobile"));
   });
+
+  sidebarBackdrop?.addEventListener("click", closeSidebarDrawer);
 
   $("#user-box").addEventListener("click", (event) => {
     event.stopPropagation();
@@ -2327,7 +2384,7 @@ function bindShellEvents() {
     }
     if (event.key === "Escape") {
       closeModal();
-      $("#sidebar").classList.remove("show-mobile");
+      closeSidebarDrawer();
     }
   });
 
