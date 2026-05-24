@@ -8,7 +8,7 @@ from email_validator import EmailNotValidError, validate_email
 
 from ..extensions import db
 from ..helpers import log_activity
-from ..models import PasswordResetToken, User
+from ..models import ActivityLog, Company, PasswordResetToken, Permission, Role, User
 from ..services.email import queue_password_reset_email
 
 bp = Blueprint("auth", __name__)
@@ -50,6 +50,81 @@ def api_logout():
     log_activity("logout", "user", current_user.id, f"Logout de {current_user.email}")
     logout_user()
     return jsonify({"ok": True})
+
+
+@bp.post("/api/auth/register")
+def api_register():
+    data = request.get_json(silent=True) or {}
+    name = (data.get("name") or "").strip()[:100]
+    company_name = (data.get("company_name") or "").strip()[:100]
+    email = (data.get("email") or "").strip().lower()[:120]
+    password = data.get("password") or ""
+
+    # Proteção Anti-Spam: Limita cadastros por IP (max 3 a cada 10 minutos)
+    ten_min_ago = datetime.utcnow() - timedelta(minutes=10)
+    recent_attempts = ActivityLog.query.filter(
+        ActivityLog.ip == (request.headers.get("X-Forwarded-For", request.remote_addr)),
+        ActivityLog.action == "create",
+        ActivityLog.entity == "user",
+        ActivityLog.created_at >= ten_min_ago
+    ).count()
+
+    if recent_attempts >= 3:
+        return jsonify({"error": "Muitas tentativas de cadastro. Tente novamente em instantes."}), 429
+
+    if not name or not company_name or not email or not password:
+        return jsonify({"error": "Todos os campos são obrigatórios."}), 400
+
+    if len(password) < 6:
+        return jsonify({"error": "A senha deve ter pelo menos 6 caracteres."}), 400
+
+    try:
+        email = validate_email(email, check_deliverability=False).normalized.lower()
+    except EmailNotValidError:
+        return jsonify({"error": "Informe um e-mail válido."}), 400
+
+    if User.query.filter_by(email=email).first():
+        return jsonify({"error": "Este e-mail já está cadastrado."}), 400
+
+    # 1. Garantir que a Role 'admin' existe
+    admin_role = Role.query.filter_by(name="admin").first()
+    if not admin_role:
+        admin_role = Role(
+            name="admin", 
+            label="Administrador", 
+            description="Acesso total ao sistema", 
+            is_system=True
+        )
+        # Associa todas as permissões existentes à nova Role admin
+        admin_role.permissions = Permission.query.all()
+        db.session.add(admin_role)
+        db.session.flush()
+
+    # 2. Multi-tenancy: Criar empresa com nome personalizado
+    company = Company(
+        name=company_name,
+        legal_name=company_name,
+    )
+    db.session.add(company)
+    db.session.flush() # Generate ID for association
+
+    user = User(
+        name=name,
+        email=email,
+        company_id=company.id,
+        role_id=admin_role.id,
+        status="active"
+    )
+    user.set_password(password)
+    user.last_login_at = datetime.utcnow()
+    db.session.add(user)
+    db.session.commit()
+
+    # 4. Login automático após o commit bem-sucedido
+    login_user(user, remember=True)
+    log_activity("create", "user", user.id, f"Novo registro: {user.email}")
+
+    return jsonify({"ok": True, "message": "Conta criada!", "user": user.to_dict()})
 
 
 @bp.post("/api/auth/forgot-password")

@@ -583,28 +583,30 @@ function navigate(page, replace = false) {
   renderPage(page);
 }
 
+const PageRenderers = {
+  dashboard: renderDashboard,
+  produtos: renderProducts,
+  estoque: renderStock,
+  entradas: renderEntries,
+  saidas: renderOutputs,
+  categorias: renderCategories,
+  fornecedores: renderSuppliers,
+  funcionarios: renderEmployees,
+  matriculas: renderEnrollments,
+  relatorios: renderReports,
+  atividades: renderActivities,
+  usuarios: renderUsers,
+  configuracoes: renderSettings,
+};
+
 async function renderPage(page = pageFromPath()) {
   destroyCharts();
   updateNavigation(page);
   setLoading(Pages[page]);
 
   try {
-    const renderers = {
-      dashboard: renderDashboard,
-      produtos: renderProducts,
-      estoque: renderStock,
-      entradas: renderEntries,
-      saidas: renderOutputs,
-      categorias: renderCategories,
-      fornecedores: renderSuppliers,
-      funcionarios: renderEmployees,
-      matriculas: renderEnrollments,
-      relatorios: renderReports,
-      atividades: renderActivities,
-      usuarios: renderUsers,
-      configuracoes: renderSettings,
-    };
-    await (renderers[page] || renderDashboard)();
+    const renderer = PageRenderers[page] || renderDashboard;
+    await renderer();
     loadNotifications();
   } catch (error) {
     pageWrap().innerHTML = `
@@ -2171,6 +2173,73 @@ function notificationItems(items) {
   `).join("");
 }
 
+function openRegisterModal() {
+  openModal({
+    title: "Criar Conta",
+    body: `
+      <form id="register-form" class="form-grid one">
+        <div class="field full">
+          <label>Seu Nome</label>
+          <input name="name" required placeholder="Como quer ser chamado"/>
+        </div>
+        <div class="field full">
+          <label>Nome da Empresa</label>
+          <input name="company_name" required placeholder="Ex: Minha Loja Ltda"/>
+        </div>
+        <div class="field full">
+          <label>E-mail</label>
+          <input type="email" name="email" required placeholder="seu@email.com"/>
+        </div>
+        <div class="field full">
+          <label>Senha</label>
+          <input type="password" name="password" required minlength="6" placeholder="Mínimo 6 caracteres"/>
+        </div>
+        <div class="form-message full" id="register-feedback" role="status"></div>
+      </form>
+    `,
+    footer: `
+      <button class="btn ghost" type="button" data-modal-close>Cancelar</button>
+      <button class="btn primary" type="submit" form="register-form" id="register-submit">
+        <i class="fa-solid fa-user-plus"></i> Criar minha conta
+      </button>
+    `,
+  });
+
+  $("#register-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const button = $("#register-submit");
+    const feedback = $("#register-feedback");
+    const formData = getFormData(event.currentTarget);
+
+    // UX: Limpeza e Normalização
+    formData.name = formData.name?.trim();
+    formData.company_name = formData.company_name?.trim();
+    formData.email = formData.email?.trim().toLowerCase();
+
+    // Segurança: Impedir clique duplo
+    feedback.className = "form-message full";
+    feedback.textContent = "";
+    button.disabled = true;
+    button.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Criando conta...`;
+
+    try {
+      await api("/api/auth/register", { method: "POST", body: formData });
+      toast("Bem-vindo!", "Sua conta foi criada e você já está logado.");
+      
+      // Login Automático: Atualiza a sessão e navega para o dashboard
+      await checkSession();
+      navigate("dashboard", true);
+      closeModal();
+    } catch (error) {
+      feedback.classList.add("error");
+      feedback.textContent = error.message;
+    } finally {
+      button.disabled = false;
+      button.innerHTML = `<i class="fa-solid fa-user-plus"></i> Criar minha conta`;
+    }
+  });
+}
+
 function openForgotPasswordModal() {
   const email = $("#login-email")?.value?.trim() || "";
   openModal({
@@ -2288,6 +2357,16 @@ function bindShellEvents() {
   });
 
   $("#forgot-password")?.addEventListener("click", openForgotPasswordModal);
+
+  // Injetar link de registro dinamicamente na tela de login
+  const forgotBtn = $("#forgot-password");
+  if (forgotBtn && !$("#register-link")) {
+    forgotBtn.insertAdjacentHTML('afterend', `
+      <span class="text-muted" style="margin: 0 8px">|</span>
+      <a href="javascript:void(0)" id="register-link" class="text-primary" style="font-weight:600">Criar Conta</a>
+    `);
+    $("#register-link").addEventListener("click", openRegisterModal);
+  }
 
   $all(".menu-item").forEach((item) => {
     item.addEventListener("click", () => {
