@@ -1,0 +1,2284 @@
+/* ==========================================================================
+   MovStok ERP - Frontend application
+   Keeps the existing static shell and connects it to the Flask REST API.
+   ========================================================================== */
+
+const App = {
+  currentPage: "dashboard",
+  user: null,
+  permissions: new Set(),
+  charts: {},
+  cache: {
+    categories: [],
+    suppliers: [],
+    products: [],
+    employees: [],
+    roles: [],
+    locations: [],
+  },
+};
+
+const Pages = {
+  dashboard: "Dashboard",
+  entradas: "Entradas",
+  saidas: "Saídas",
+  estoque: "Estoque",
+  produtos: "Produtos",
+  categorias: "Categorias",
+  fornecedores: "Fornecedores",
+  funcionarios: "Funcionários",
+  matriculas: "Matrículas",
+  relatorios: "Relatórios",
+  atividades: "Atividades",
+  usuarios: "Usuários",
+  configuracoes: "Configurações",
+};
+
+const Icons = {
+  dashboard: "fa-gauge-high",
+  entradas: "fa-arrow-down-to-bracket",
+  saidas: "fa-arrow-up-from-bracket",
+  estoque: "fa-boxes-stacked",
+  produtos: "fa-tags",
+  categorias: "fa-layer-group",
+  fornecedores: "fa-truck-fast",
+  funcionarios: "fa-users",
+  matriculas: "fa-id-card",
+  relatorios: "fa-chart-line",
+  atividades: "fa-clock-rotate-left",
+  usuarios: "fa-user-shield",
+  configuracoes: "fa-gear",
+};
+
+const Money = new Intl.NumberFormat("pt-BR", {
+  style: "currency",
+  currency: "BRL",
+});
+
+const NumberBR = new Intl.NumberFormat("pt-BR", {
+  maximumFractionDigits: 3,
+});
+
+const DateTimeBR = new Intl.DateTimeFormat("pt-BR", {
+  dateStyle: "short",
+  timeStyle: "short",
+});
+
+const DateBR = new Intl.DateTimeFormat("pt-BR", {
+  dateStyle: "short",
+});
+
+function $(selector, root = document) {
+  return root.querySelector(selector);
+}
+
+function $all(selector, root = document) {
+  return [...root.querySelectorAll(selector)];
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function fmtMoney(value) {
+  return Money.format(Number(value || 0));
+}
+
+function fmtQty(value) {
+  return NumberBR.format(Number(value || 0));
+}
+
+function fmtDate(value, withTime = true) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return withTime ? DateTimeBR.format(date) : DateBR.format(date);
+}
+
+function initials(name) {
+  return String(name || "U")
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
+}
+
+function hasPermission(code) {
+  return App.permissions.has(code) || App.user?.role?.name === "admin";
+}
+
+function buildQuery(params = {}) {
+  const search = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") {
+      search.set(key, value);
+    }
+  });
+  const query = search.toString();
+  return query ? `?${query}` : "";
+}
+
+async function api(path, options = {}) {
+  const config = {
+    credentials: "same-origin",
+    headers: {
+      Accept: "application/json",
+      ...(options.body ? { "Content-Type": "application/json" } : {}),
+      ...(options.headers || {}),
+    },
+    ...options,
+  };
+
+  if (options.body && typeof options.body !== "string") {
+    config.body = JSON.stringify(options.body);
+  }
+
+  const response = await fetch(path, config);
+  const contentType = response.headers.get("content-type") || "";
+  const payload = contentType.includes("application/json")
+    ? await response.json()
+    : await response.text();
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      showAuth();
+    }
+    const message = typeof payload === "string"
+      ? payload
+      : payload.error || "Não foi possível concluir a operação.";
+    throw new Error(message);
+  }
+
+  return payload;
+}
+
+function pageWrap() {
+  return $("#page-wrap");
+}
+
+function setLoading(title = "Carregando dados") {
+  pageWrap().innerHTML = `
+    <div class="panel">
+      <div class="panel-body">
+        <div class="skeleton" style="height:18px;width:180px;margin-bottom:14px"></div>
+        <div class="skeleton" style="height:12px;width:70%;margin-bottom:10px"></div>
+        <div class="skeleton" style="height:12px;width:45%"></div>
+        <span class="text-muted" style="display:block;margin-top:16px">${escapeHtml(title)}...</span>
+      </div>
+    </div>
+  `;
+}
+
+function pageHeader(page, subtitle, actions = "") {
+  return `
+    <div class="page-head">
+      <div>
+        <h1><i class="fa-solid ${Icons[page] || "fa-table"}"></i> ${Pages[page] || page}</h1>
+        <div class="subtitle">${escapeHtml(subtitle)}</div>
+      </div>
+      <div class="page-actions">${actions}</div>
+    </div>
+  `;
+}
+
+function emptyState(icon, title, description) {
+  return `
+    <div class="empty-state">
+      <i class="fa-solid ${icon}"></i>
+      <h4>${escapeHtml(title)}</h4>
+      <p>${escapeHtml(description)}</p>
+    </div>
+  `;
+}
+
+function statusBadge(status, map) {
+  const cfg = map[status] || map.default || { label: status || "-", cls: "neutral" };
+  return `<span class="badge ${cfg.cls}">${escapeHtml(cfg.label)}</span>`;
+}
+
+function stockBadge(product) {
+  const status = product.stock_status;
+  return statusBadge(status, {
+    ok: { label: "OK", cls: "success" },
+    low: { label: "Baixo", cls: "warning" },
+    out: { label: "Zerado", cls: "danger" },
+  });
+}
+
+function activeBadge(active) {
+  return statusBadge(active ? "active" : "inactive", {
+    active: { label: "Ativo", cls: "success" },
+    inactive: { label: "Inativo", cls: "neutral" },
+  });
+}
+
+function userStatusBadge(status) {
+  return statusBadge(status, {
+    active: { label: "Ativo", cls: "success" },
+    inactive: { label: "Inativo", cls: "neutral" },
+    blocked: { label: "Bloqueado", cls: "danger" },
+    leave: { label: "Afastado", cls: "warning" },
+    terminated: { label: "Desligado", cls: "danger" },
+    default: { label: status || "-", cls: "neutral" },
+  });
+}
+
+function movementStatusBadge(status) {
+  return statusBadge(status, {
+    confirmed: { label: "Confirmado", cls: "success" },
+    cancelled: { label: "Cancelado", cls: "danger" },
+    default: { label: status || "-", cls: "neutral" },
+  });
+}
+
+function reasonLabel(reason) {
+  return ({
+    sale: "Venda",
+    consumption: "Consumo",
+    loss: "Perda",
+    transfer: "Transferência",
+  })[reason] || reason || "-";
+}
+
+function roleLabel(role) {
+  return role?.label || role?.name || "-";
+}
+
+function table(headers, rows, emptyHtml) {
+  return `
+    <div class="table-wrap">
+      ${tableBody(headers, rows, emptyHtml)}
+    </div>
+  `;
+}
+
+function tableBody(headers, rows, emptyHtml) {
+  if (!rows.length) {
+    return emptyHtml;
+  }
+
+  return `
+    <table class="data-table">
+      <thead>
+        <tr>${headers.map((h) => `<th class="${h.cls || ""}">${h.label}</th>`).join("")}</tr>
+      </thead>
+      <tbody>${rows.join("")}</tbody>
+    </table>
+  `;
+}
+
+function toolbar({ id, placeholder = "Buscar", filters = "", extra = "" }) {
+  return `
+    <div class="toolbar">
+      <div class="search">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input id="${id}-search" type="text" placeholder="${escapeHtml(placeholder)}"/>
+      </div>
+      ${filters}
+      ${extra}
+    </div>
+  `;
+}
+
+function pagination(meta, onClickName) {
+  if (!meta || meta.pages <= 1) return "";
+  const pages = [];
+  const start = Math.max(1, meta.page - 2);
+  const end = Math.min(meta.pages, meta.page + 2);
+
+  pages.push(`<button ${meta.has_prev ? "" : "disabled"} data-page-target="${meta.page - 1}">Anterior</button>`);
+  for (let page = start; page <= end; page += 1) {
+    pages.push(`<button class="${page === meta.page ? "active" : ""}" data-page-target="${page}">${page}</button>`);
+  }
+  pages.push(`<button ${meta.has_next ? "" : "disabled"} data-page-target="${meta.page + 1}">Próxima</button>`);
+
+  return `
+    <div class="pagination" data-pagination="${onClickName}">
+      <span>${meta.total} registros · página ${meta.page} de ${meta.pages}</span>
+      <div class="pages">${pages.join("")}</div>
+    </div>
+  `;
+}
+
+function bindPagination(name, callback) {
+  const root = $(`[data-pagination="${name}"]`);
+  if (!root) return;
+  root.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-page-target]");
+    if (!button || button.disabled) return;
+    callback(Number(button.dataset.pageTarget));
+  });
+}
+
+function toast(title, message = "", type = "success") {
+  const root = $("#toast-root");
+  const node = document.createElement("div");
+  node.className = `toast ${type}`;
+  const icon = type === "danger" ? "fa-circle-exclamation"
+    : type === "warning" ? "fa-triangle-exclamation"
+      : "fa-circle-check";
+  node.innerHTML = `
+    <i class="fa-solid ${icon}"></i>
+    <div>
+      <strong>${escapeHtml(title)}</strong>
+      ${message ? `<small>${escapeHtml(message)}</small>` : ""}
+    </div>
+  `;
+  root.appendChild(node);
+  setTimeout(() => node.remove(), 4200);
+}
+
+function openModal({ title, body, footer = "", size = "" }) {
+  const root = $("#modal-root");
+  root.innerHTML = `
+    <div class="modal ${size}">
+      <div class="modal-head">
+        <h3>${escapeHtml(title)}</h3>
+        <button type="button" data-modal-close>&times;</button>
+      </div>
+      <div class="modal-body">${body}</div>
+      ${footer ? `<div class="modal-foot">${footer}</div>` : ""}
+    </div>
+  `;
+  root.classList.add("show");
+  $all("[data-modal-close]", root).forEach((button) => {
+    button.addEventListener("click", closeModal);
+  });
+  root.addEventListener("click", closeModalOnBackdrop);
+}
+
+function closeModalOnBackdrop(event) {
+  if (event.target.id === "modal-root") closeModal();
+}
+
+function closeModal() {
+  const root = $("#modal-root");
+  root.classList.remove("show");
+  root.removeEventListener("click", closeModalOnBackdrop);
+  root.innerHTML = "";
+}
+
+function getFormData(form) {
+  const data = {};
+  new FormData(form).forEach((value, key) => {
+    data[key] = typeof value === "string" ? value.trim() : value;
+  });
+  return data;
+}
+
+function optionList(items, selected, label = "name") {
+  return items.map((item) => `
+    <option value="${item.id}" ${Number(selected) === Number(item.id) ? "selected" : ""}>
+      ${escapeHtml(item[label])}
+    </option>
+  `).join("");
+}
+
+async function confirmAction(title, message, actionLabel, action) {
+  openModal({
+    title,
+    body: `<p class="text-muted">${escapeHtml(message)}</p>`,
+    footer: `
+      <button type="button" class="btn ghost" data-modal-close>Cancelar</button>
+      <button type="button" class="btn danger" id="confirm-action">${escapeHtml(actionLabel)}</button>
+    `,
+  });
+  $("#confirm-action").addEventListener("click", async () => {
+    try {
+      await action();
+      closeModal();
+    } catch (error) {
+      toast("Operação não concluída", error.message, "danger");
+    }
+  });
+}
+
+async function loadLookupData(types = ["categories", "suppliers", "products", "employees", "locations"]) {
+  const tasks = [];
+  if (types.includes("categories")) {
+    tasks.push(api("/api/categories").then((data) => { App.cache.categories = data.items || []; }));
+  }
+  if (types.includes("suppliers")) {
+    tasks.push(api("/api/suppliers?paginated=0").then((data) => { App.cache.suppliers = data.items || []; }));
+  }
+  if (types.includes("products")) {
+    tasks.push(api("/api/products?per_page=200").then((data) => { App.cache.products = data.items || []; }));
+  }
+  if (types.includes("employees")) {
+    tasks.push(api("/api/employees?paginated=0").then((data) => { App.cache.employees = data.items || []; }));
+  }
+  if (types.includes("roles")) {
+    tasks.push(api("/api/roles").then((data) => { App.cache.roles = data.items || []; }));
+  }
+  if (types.includes("locations")) {
+    tasks.push(api("/api/locations").then((data) => { App.cache.locations = data.items || []; }));
+  }
+  await Promise.all(tasks);
+}
+
+function destroyCharts() {
+  Object.values(App.charts).forEach((chart) => chart?.destroy?.());
+  App.charts = {};
+}
+
+function renderLineChart(canvasId, labels, entries, outputs) {
+  if (!window.Chart) return;
+  const ctx = document.getElementById(canvasId);
+  if (!ctx) return;
+  App.charts[canvasId] = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [
+        {
+          label: "Entradas",
+          data: entries,
+          borderColor: "#15803d",
+          backgroundColor: "rgba(21,128,61,0.08)",
+          tension: 0.35,
+          fill: true,
+        },
+        {
+          label: "Saídas",
+          data: outputs,
+          borderColor: "#dc2626",
+          backgroundColor: "rgba(220,38,38,0.08)",
+          tension: 0.35,
+          fill: true,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { position: "bottom" } },
+      scales: { y: { beginAtZero: true } },
+    },
+  });
+}
+
+function renderBarChart(canvasId, labels, data) {
+  if (!window.Chart) return;
+  const ctx = document.getElementById(canvasId);
+  if (!ctx) return;
+  App.charts[canvasId] = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [{
+        label: "Produtos",
+        data,
+        backgroundColor: "#1d4ed8",
+        borderRadius: 4,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+    },
+  });
+}
+
+function showAuth() {
+  $("#auth").style.display = "block";
+  $("#app-shell").classList.remove("show");
+  App.user = null;
+  App.permissions = new Set();
+  if (location.pathname !== "/login") {
+    history.replaceState({}, "", "/login");
+  }
+}
+
+function showApp() {
+  $("#auth").style.display = "none";
+  $("#app-shell").classList.add("show");
+}
+
+function updateUserBox() {
+  $("#user-name").textContent = App.user?.name || "Usuário";
+  $("#user-role").textContent = roleLabel(App.user?.role);
+  $("#user-avatar").textContent = initials(App.user?.name);
+}
+
+async function checkSession() {
+  const session = await api("/api/auth/me");
+  if (!session.authenticated) {
+    showAuth();
+    return false;
+  }
+  App.user = session.user;
+  App.permissions = new Set(session.permissions || []);
+  updateUserBox();
+  showApp();
+  return true;
+}
+
+function pageFromPath() {
+  const path = location.pathname.replace(/\/+$/, "");
+  if (path === "/app" || path === "") return "dashboard";
+  const match = path.match(/^\/app\/([^/]+)/);
+  return match && Pages[match[1]] ? match[1] : "dashboard";
+}
+
+function updateNavigation(page) {
+  App.currentPage = page;
+  $("#bc-current").textContent = Pages[page] || page;
+  $all(".menu-item").forEach((item) => {
+    item.classList.toggle("active", item.dataset.page === page);
+  });
+}
+
+function navigate(page, replace = false) {
+  if (!Pages[page]) page = "dashboard";
+  const path = page === "dashboard" ? "/app" : `/app/${page}`;
+  if (replace) {
+    history.replaceState({ page }, "", path);
+  } else if (location.pathname !== path) {
+    history.pushState({ page }, "", path);
+  }
+  renderPage(page);
+}
+
+async function renderPage(page = pageFromPath()) {
+  destroyCharts();
+  updateNavigation(page);
+  setLoading(Pages[page]);
+
+  try {
+    const renderers = {
+      dashboard: renderDashboard,
+      produtos: renderProducts,
+      estoque: renderStock,
+      entradas: renderEntries,
+      saidas: renderOutputs,
+      categorias: renderCategories,
+      fornecedores: renderSuppliers,
+      funcionarios: renderEmployees,
+      matriculas: renderEnrollments,
+      relatorios: renderReports,
+      atividades: renderActivities,
+      usuarios: renderUsers,
+      configuracoes: renderSettings,
+    };
+    await (renderers[page] || renderDashboard)();
+    loadNotifications();
+  } catch (error) {
+    pageWrap().innerHTML = `
+      ${pageHeader(page, "Não foi possível carregar esta tela.")}
+      <div class="panel">
+        <div class="panel-body">
+          ${emptyState("fa-triangle-exclamation", "Erro ao carregar", error.message)}
+        </div>
+      </div>
+    `;
+  }
+}
+
+async function renderDashboard() {
+  const data = await api("/api/dashboard");
+  const kpi = data.kpi || {};
+  pageWrap().innerHTML = `
+    ${pageHeader("dashboard", "Visão executiva do almoxarifado e operação logística.")}
+    <div class="kpi-grid">
+      ${kpiCard("Produtos", kpi.total_products, "Cadastrados no catálogo", "fa-tags")}
+      ${kpiCard("Estoque atual", fmtQty(kpi.total_units), "Unidades totais", "fa-boxes-stacked", "green")}
+      ${kpiCard("Valor em estoque", fmtMoney(kpi.inventory_value), "Custo contábil", "fa-sack-dollar", "cyan")}
+      ${kpiCard("Alertas", Number(kpi.low_stock || 0) + Number(kpi.out_stock || 0), "Baixo ou zerado", "fa-triangle-exclamation", "amber")}
+      ${kpiCard("Entradas hoje", kpi.entries_today, "Recebimentos", "fa-arrow-down-to-bracket", "green")}
+      ${kpiCard("Saídas hoje", kpi.outputs_today, "Requisições atendidas", "fa-arrow-up-from-bracket", "red")}
+    </div>
+
+    <div class="grid-2">
+      <section class="panel">
+        <div class="panel-head">
+          <h3>Movimentação dos últimos 14 dias</h3>
+        </div>
+        <div class="panel-body">
+          <div class="chart-box"><canvas id="movement-chart"></canvas></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h3>Produtos mais requisitados</h3>
+        </div>
+        <div class="panel-body">
+          ${dashboardTopProducts(data.top_products || [])}
+        </div>
+      </section>
+    </div>
+
+    <div class="grid-2">
+      <section class="panel">
+        <div class="panel-head">
+          <h3>Distribuição por categoria</h3>
+        </div>
+        <div class="panel-body">
+          <div class="chart-box sm"><canvas id="category-chart"></canvas></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h3>Atividades recentes</h3>
+        </div>
+        <div class="panel-body">
+          ${activityList(data.recent_activity || [])}
+        </div>
+      </section>
+    </div>
+  `;
+
+  const movement = data.chart_movements || [];
+  renderLineChart(
+    "movement-chart",
+    movement.map((item) => fmtDate(item.date, false)),
+    movement.map((item) => item.entries),
+    movement.map((item) => item.outputs),
+  );
+
+  const categories = data.categories_chart || [];
+  renderBarChart(
+    "category-chart",
+    categories.map((item) => item.name),
+    categories.map((item) => item.count),
+  );
+}
+
+function kpiCard(label, value, delta, icon, color = "") {
+  return `
+    <div class="kpi-card">
+      <div>
+        <div class="kpi-label">${escapeHtml(label)}</div>
+        <div class="kpi-value">${escapeHtml(value ?? 0)}</div>
+        <div class="kpi-delta">${escapeHtml(delta)}</div>
+      </div>
+      <div class="kpi-icon ${color}"><i class="fa-solid ${icon}"></i></div>
+    </div>
+  `;
+}
+
+function dashboardTopProducts(items) {
+  if (!items.length) {
+    return emptyState("fa-chart-simple", "Sem movimentações", "Ainda não há saídas no período analisado.");
+  }
+  return table(
+    [
+      { label: "SKU" },
+      { label: "Produto" },
+      { label: "Saídas", cls: "num" },
+      { label: "Estoque", cls: "num" },
+    ],
+    items.map((p) => `
+      <tr>
+        <td class="mono">${escapeHtml(p.sku)}</td>
+        <td>${escapeHtml(p.name)}</td>
+        <td class="num">${fmtQty(p.quantity)}</td>
+        <td class="num">${fmtQty(p.stock)}</td>
+      </tr>
+    `),
+    emptyState("fa-chart-simple", "Sem movimentações", "Ainda não há dados."),
+  );
+}
+
+function activityList(items) {
+  if (!items.length) {
+    return emptyState("fa-clock-rotate-left", "Sem atividades", "As ações auditadas aparecerão aqui.");
+  }
+  return `
+    <table class="data-table">
+      <tbody>
+        ${items.map((item) => `
+          <tr>
+            <td>
+              <strong>${escapeHtml(item.description || item.entity)}</strong>
+              <div class="text-muted">${escapeHtml(item.user?.name || "Sistema")} · ${escapeHtml(item.action)}</div>
+            </td>
+            <td class="text-right text-muted">${fmtDate(item.created_at)}</td>
+          </tr>
+        `).join("")}
+      </tbody>
+    </table>
+  `;
+}
+
+async function renderProducts(params = {}) {
+  await loadLookupData(["categories", "suppliers", "locations"]);
+  const data = await api(`/api/products${buildQuery({ page: params.page || 1, search: params.search, stock_status: params.stock_status, category_id: params.category_id })}`);
+  const canEdit = hasPermission("products.edit");
+  const canDelete = hasPermission("products.delete");
+  const canCreate = hasPermission("products.create");
+
+  pageWrap().innerHTML = `
+    ${pageHeader("produtos", "Catálogo completo de materiais, SKUs, custos e níveis mínimos.", canCreate ? `
+      <button class="btn primary" id="new-product"><i class="fa-solid fa-plus"></i> Novo produto</button>
+    ` : "")}
+    <div class="table-wrap">
+      ${toolbar({
+        id: "products",
+        placeholder: "Buscar por nome, SKU ou código de barras",
+        filters: `
+          <select id="products-category">
+            <option value="">Todas as categorias</option>
+            ${optionList(App.cache.categories, params.category_id)}
+          </select>
+          <select id="products-stock">
+            <option value="">Todos os estoques</option>
+            <option value="ok" ${params.stock_status === "ok" ? "selected" : ""}>OK</option>
+            <option value="low" ${params.stock_status === "low" ? "selected" : ""}>Baixo</option>
+            <option value="out" ${params.stock_status === "out" ? "selected" : ""}>Zerado</option>
+          </select>
+        `,
+      })}
+      ${productsTable(data.items || [], { canEdit, canDelete })}
+      ${pagination(data.meta, "products")}
+    </div>
+  `;
+
+  $("#products-search").value = params.search || "";
+  bindSearch("#products-search", (value) => renderProducts({ ...params, page: 1, search: value }));
+  $("#products-category").addEventListener("change", (event) => renderProducts({ ...params, page: 1, category_id: event.target.value }));
+  $("#products-stock").addEventListener("change", (event) => renderProducts({ ...params, page: 1, stock_status: event.target.value }));
+  bindPagination("products", (page) => renderProducts({ ...params, page }));
+  $("#new-product")?.addEventListener("click", () => openProductModal());
+  bindRowActions({
+    edit: (id) => openProductModal(data.items.find((item) => item.id === id)),
+    delete: (id) => deleteProduct(id),
+  });
+}
+
+function productsTable(items, { canEdit, canDelete }) {
+  return tableBody(
+    [
+      { label: "SKU" },
+      { label: "Produto" },
+      { label: "Categoria" },
+      { label: "Fornecedor" },
+      { label: "Estoque", cls: "num" },
+      { label: "Mínimo", cls: "num" },
+      { label: "Custo", cls: "num" },
+      { label: "Status" },
+      { label: "", cls: "actions" },
+    ],
+    items.map((p) => `
+      <tr>
+        <td class="mono">${escapeHtml(p.sku)}</td>
+        <td>
+          <strong>${escapeHtml(p.name)}</strong>
+          <div class="text-muted">${escapeHtml(p.unit || "UN")}${p.barcode ? ` · ${escapeHtml(p.barcode)}` : ""}</div>
+        </td>
+        <td>${escapeHtml(p.category?.name || "-")}</td>
+        <td>${escapeHtml(p.supplier?.name || "-")}</td>
+        <td class="num">
+          ${fmtQty(p.stock_quantity)}
+          ${stockBar(p)}
+        </td>
+        <td class="num">${fmtQty(p.min_stock)}</td>
+        <td class="num">${fmtMoney(p.cost_price)}</td>
+        <td>${stockBadge(p)}</td>
+        <td class="actions">
+          ${canEdit ? `<button class="btn icon-only sm" title="Editar" data-action="edit" data-id="${p.id}"><i class="fa-solid fa-pen"></i></button>` : ""}
+          ${canDelete ? `<button class="btn icon-only sm danger" title="Desativar" data-action="delete" data-id="${p.id}"><i class="fa-solid fa-ban"></i></button>` : ""}
+        </td>
+      </tr>
+    `),
+    emptyState("fa-tags", "Nenhum produto encontrado", "Cadastre produtos para movimentar o estoque."),
+  );
+}
+
+function stockBar(p) {
+  const max = Number(p.max_stock || p.min_stock || p.stock_quantity || 1);
+  const percent = Math.max(5, Math.min(100, (Number(p.stock_quantity || 0) / max) * 100));
+  return `
+    <div class="stock-bar ${p.stock_status}">
+      <span style="width:${percent}%"></span>
+    </div>
+  `;
+}
+
+function productForm(product = {}) {
+  return `
+    <form id="product-form" class="form-grid">
+      <div class="field">
+        <label>SKU</label>
+        <input name="sku" value="${escapeHtml(product.sku || "")}" required>
+      </div>
+      <div class="field">
+        <label>Unidade</label>
+        <input name="unit" value="${escapeHtml(product.unit || "UN")}" required>
+      </div>
+      <div class="field full">
+        <label>Nome do produto</label>
+        <input name="name" value="${escapeHtml(product.name || "")}" required>
+      </div>
+      <div class="field">
+        <label>Categoria</label>
+        <select name="category_id">
+          <option value="">Sem categoria</option>
+          ${optionList(App.cache.categories, product.category?.id)}
+        </select>
+      </div>
+      <div class="field">
+        <label>Fornecedor</label>
+        <select name="supplier_id">
+          <option value="">Sem fornecedor</option>
+          ${optionList(App.cache.suppliers, product.supplier?.id)}
+        </select>
+      </div>
+      <div class="field">
+        <label>Local de estoque</label>
+        <select name="location_id">
+          <option value="">Sem local</option>
+          ${optionList(App.cache.locations, product.location?.id)}
+        </select>
+      </div>
+      <div class="field">
+        <label>Código de barras</label>
+        <input name="barcode" value="${escapeHtml(product.barcode || "")}">
+      </div>
+      <div class="field">
+        <label>Custo unitário</label>
+        <input name="cost_price" type="number" step="0.01" min="0" value="${product.cost_price ?? 0}">
+      </div>
+      <div class="field">
+        <label>Preço de saída</label>
+        <input name="sale_price" type="number" step="0.01" min="0" value="${product.sale_price ?? 0}">
+      </div>
+      <div class="field">
+        <label>Estoque mínimo</label>
+        <input name="min_stock" type="number" step="0.001" min="0" value="${product.min_stock ?? 0}">
+      </div>
+      <div class="field">
+        <label>Estoque máximo</label>
+        <input name="max_stock" type="number" step="0.001" min="0" value="${product.max_stock ?? 0}">
+      </div>
+      ${product.id ? "" : `
+        <div class="field">
+          <label>Estoque inicial</label>
+          <input name="stock_quantity" type="number" step="0.001" min="0" value="0">
+        </div>
+      `}
+      <div class="field">
+        <label>Status</label>
+        <select name="status">
+          <option value="active" ${product.status === "active" ? "selected" : ""}>Ativo</option>
+          <option value="inactive" ${product.status === "inactive" ? "selected" : ""}>Inativo</option>
+          <option value="discontinued" ${product.status === "discontinued" ? "selected" : ""}>Descontinuado</option>
+        </select>
+      </div>
+      <div class="field full">
+        <label>Descrição</label>
+        <textarea name="description">${escapeHtml(product.description || "")}</textarea>
+      </div>
+    </form>
+  `;
+}
+
+function openProductModal(product = null) {
+  openModal({
+    title: product ? "Editar produto" : "Novo produto",
+    size: "lg",
+    body: productForm(product || {}),
+    footer: `
+      <button class="btn ghost" type="button" data-modal-close>Cancelar</button>
+      <button class="btn primary" type="submit" form="product-form">
+        <i class="fa-solid fa-floppy-disk"></i> Salvar
+      </button>
+    `,
+  });
+  $("#product-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    try {
+      const data = getFormData(event.currentTarget);
+      await api(product ? `/api/products/${product.id}` : "/api/products", {
+        method: product ? "PUT" : "POST",
+        body: data,
+      });
+      closeModal();
+      toast("Produto salvo", "Cadastro atualizado com sucesso.");
+      renderProducts();
+    } catch (error) {
+      toast("Erro ao salvar produto", error.message, "danger");
+    }
+  });
+}
+
+function deleteProduct(id) {
+  confirmAction(
+    "Desativar produto",
+    "O produto será mantido no histórico, mas ficará inativo para novas operações.",
+    "Desativar",
+    async () => {
+      await api(`/api/products/${id}`, { method: "DELETE" });
+      toast("Produto desativado");
+      renderProducts();
+    },
+  );
+}
+
+async function renderStock(params = {}) {
+  const data = await api(`/api/stock${buildQuery({ page: params.page || 1, search: params.search, stock_status: params.stock_status })}`);
+  pageWrap().innerHTML = `
+    ${pageHeader("estoque", "Consulta operacional de saldo, alertas e cobertura.", `
+      <a class="btn ghost" href="/api/reports/export/stock.xlsx"><i class="fa-solid fa-file-excel"></i> Excel</a>
+      <a class="btn ghost" href="/api/reports/export/stock.pdf"><i class="fa-solid fa-file-pdf"></i> PDF</a>
+    `)}
+    <div class="table-wrap">
+      ${toolbar({
+        id: "stock",
+        placeholder: "Buscar por produto ou SKU",
+        filters: `
+          <select id="stock-status">
+            <option value="">Todos</option>
+            <option value="ok" ${params.stock_status === "ok" ? "selected" : ""}>OK</option>
+            <option value="low" ${params.stock_status === "low" ? "selected" : ""}>Baixo</option>
+            <option value="out" ${params.stock_status === "out" ? "selected" : ""}>Zerado</option>
+          </select>
+        `,
+      })}
+      ${stockTable(data.items || [])}
+      ${pagination(data.meta, "stock")}
+    </div>
+  `;
+
+  $("#stock-search").value = params.search || "";
+  bindSearch("#stock-search", (value) => renderStock({ ...params, page: 1, search: value }));
+  $("#stock-status").addEventListener("change", (event) => renderStock({ ...params, page: 1, stock_status: event.target.value }));
+  bindPagination("stock", (page) => renderStock({ ...params, page }));
+  bindRowActions({
+    entry: async (id) => {
+      await loadLookupData(["products", "suppliers"]);
+      openEntryModal({ product_id: id });
+    },
+    output: async (id) => {
+      await loadLookupData(["products", "employees"]);
+      openOutputModal({ product_id: id });
+    },
+  });
+}
+
+function stockTable(items) {
+  return tableBody(
+    [
+      { label: "SKU" },
+      { label: "Produto" },
+      { label: "Local" },
+      { label: "Atual", cls: "num" },
+      { label: "Mínimo", cls: "num" },
+      { label: "Máximo", cls: "num" },
+      { label: "Valor", cls: "num" },
+      { label: "Status" },
+      { label: "", cls: "actions" },
+    ],
+    items.map((p) => `
+      <tr>
+        <td class="mono">${escapeHtml(p.sku)}</td>
+        <td>
+          <strong>${escapeHtml(p.name)}</strong>
+          <div class="text-muted">${escapeHtml(p.category?.name || "Sem categoria")}</div>
+        </td>
+        <td>${escapeHtml(p.location?.name || "-")}</td>
+        <td class="num">${fmtQty(p.stock_quantity)}${stockBar(p)}</td>
+        <td class="num">${fmtQty(p.min_stock)}</td>
+        <td class="num">${fmtQty(p.max_stock)}</td>
+        <td class="num">${fmtMoney(Number(p.stock_quantity || 0) * Number(p.cost_price || 0))}</td>
+        <td>${stockBadge(p)}</td>
+        <td class="actions">
+          <button class="btn icon-only sm success" title="Entrada" data-action="entry" data-id="${p.id}"><i class="fa-solid fa-plus"></i></button>
+          <button class="btn icon-only sm danger" title="Saída" data-action="output" data-id="${p.id}"><i class="fa-solid fa-minus"></i></button>
+        </td>
+      </tr>
+    `),
+    emptyState("fa-boxes-stacked", "Sem itens em estoque", "Os saldos dos produtos aparecerão nesta consulta."),
+  );
+}
+
+async function renderEntries(params = {}) {
+  await loadLookupData(["products", "suppliers"]);
+  const data = await api(`/api/entries${buildQuery({ page: params.page || 1 })}`);
+  pageWrap().innerHTML = `
+    ${pageHeader("entradas", "Recebimentos, compras, devoluções e ajustes positivos.", hasPermission("stock.entry") ? `
+      <button class="btn primary" id="new-entry"><i class="fa-solid fa-plus"></i> Registrar entrada</button>
+    ` : "")}
+    ${entriesTable(data.items || [])}
+    ${pagination(data.meta, "entries")}
+  `;
+  $("#new-entry")?.addEventListener("click", () => openEntryModal());
+  bindPagination("entries", (page) => renderEntries({ ...params, page }));
+  bindRowActions({
+    cancel: (id) => cancelEntry(id),
+  });
+}
+
+function entriesTable(items) {
+  return table(
+    [
+      { label: "Data" },
+      { label: "Documento" },
+      { label: "Produto" },
+      { label: "Fornecedor" },
+      { label: "Qtde", cls: "num" },
+      { label: "Custo", cls: "num" },
+      { label: "Total", cls: "num" },
+      { label: "Status" },
+      { label: "", cls: "actions" },
+    ],
+    items.map((e) => `
+      <tr>
+        <td>${fmtDate(e.entry_date)}</td>
+        <td class="mono">${escapeHtml(e.document || "-")}</td>
+        <td>${escapeHtml(e.product?.sku || "")} · ${escapeHtml(e.product?.name || "-")}</td>
+        <td>${escapeHtml(e.supplier?.name || "-")}</td>
+        <td class="num">${fmtQty(e.quantity)}</td>
+        <td class="num">${fmtMoney(e.unit_cost)}</td>
+        <td class="num">${fmtMoney(e.total_cost)}</td>
+        <td>${movementStatusBadge(e.status)}</td>
+        <td class="actions">
+          ${e.status !== "cancelled" ? `<button class="btn icon-only sm danger" title="Cancelar" data-action="cancel" data-id="${e.id}"><i class="fa-solid fa-ban"></i></button>` : ""}
+        </td>
+      </tr>
+    `),
+    emptyState("fa-arrow-down-to-bracket", "Nenhuma entrada registrada", "Registre recebimentos para atualizar o saldo de estoque."),
+  );
+}
+
+function movementProductOptions(selected) {
+  return App.cache.products.map((p) => `
+    <option value="${p.id}" ${Number(selected) === Number(p.id) ? "selected" : ""}>
+      ${escapeHtml(p.sku)} · ${escapeHtml(p.name)} (${fmtQty(p.stock_quantity)} ${escapeHtml(p.unit)})
+    </option>
+  `).join("");
+}
+
+function openEntryModal(defaults = {}) {
+  openModal({
+    title: "Registrar entrada",
+    size: "lg",
+    body: `
+      <form id="entry-form" class="form-grid">
+        <div class="field full">
+          <label>Produto</label>
+          <select name="product_id" required>
+            <option value="">Selecione</option>
+            ${movementProductOptions(defaults.product_id)}
+          </select>
+        </div>
+        <div class="field">
+          <label>Fornecedor</label>
+          <select name="supplier_id">
+            <option value="">Fornecedor do produto</option>
+            ${optionList(App.cache.suppliers)}
+          </select>
+        </div>
+        <div class="field">
+          <label>Documento</label>
+          <input name="document" placeholder="NF, OC ou referência">
+        </div>
+        <div class="field">
+          <label>Quantidade</label>
+          <input name="quantity" type="number" min="0.001" step="0.001" required>
+        </div>
+        <div class="field">
+          <label>Custo unitário</label>
+          <input name="unit_cost" type="number" min="0" step="0.01">
+        </div>
+        <div class="field full">
+          <label>Observações</label>
+          <textarea name="notes"></textarea>
+        </div>
+      </form>
+    `,
+    footer: `
+      <button class="btn ghost" type="button" data-modal-close>Cancelar</button>
+      <button class="btn success" type="submit" form="entry-form">
+        <i class="fa-solid fa-check"></i> Confirmar entrada
+      </button>
+    `,
+  });
+  $("#entry-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    try {
+      await api("/api/entries", { method: "POST", body: getFormData(event.currentTarget) });
+      closeModal();
+      toast("Entrada registrada", "Saldo atualizado com sucesso.");
+      renderPage(App.currentPage);
+    } catch (error) {
+      toast("Erro ao registrar entrada", error.message, "danger");
+    }
+  });
+}
+
+function cancelEntry(id) {
+  confirmAction(
+    "Cancelar entrada",
+    "O saldo do produto será revertido conforme a quantidade dessa entrada.",
+    "Cancelar entrada",
+    async () => {
+      await api(`/api/entries/${id}`, { method: "DELETE" });
+      toast("Entrada cancelada");
+      renderEntries();
+    },
+  );
+}
+
+async function renderOutputs(params = {}) {
+  await loadLookupData(["products", "employees"]);
+  const data = await api(`/api/outputs${buildQuery({ page: params.page || 1 })}`);
+  pageWrap().innerHTML = `
+    ${pageHeader("saidas", "Requisições internas, consumo, perdas, transferências e vendas.", hasPermission("stock.output") ? `
+      <button class="btn primary" id="new-output"><i class="fa-solid fa-plus"></i> Registrar saída</button>
+    ` : "")}
+    ${outputsTable(data.items || [])}
+    ${pagination(data.meta, "outputs")}
+  `;
+  $("#new-output")?.addEventListener("click", () => openOutputModal());
+  bindPagination("outputs", (page) => renderOutputs({ ...params, page }));
+  bindRowActions({
+    cancel: (id) => cancelOutput(id),
+  });
+}
+
+function outputsTable(items) {
+  return table(
+    [
+      { label: "Data" },
+      { label: "Documento" },
+      { label: "Produto" },
+      { label: "Funcionário" },
+      { label: "Motivo" },
+      { label: "Qtde", cls: "num" },
+      { label: "Total", cls: "num" },
+      { label: "Status" },
+      { label: "", cls: "actions" },
+    ],
+    items.map((o) => `
+      <tr>
+        <td>${fmtDate(o.output_date)}</td>
+        <td class="mono">${escapeHtml(o.document || "-")}</td>
+        <td>${escapeHtml(o.product?.sku || "")} · ${escapeHtml(o.product?.name || "-")}</td>
+        <td>${escapeHtml(o.employee?.enrollment || "")} ${escapeHtml(o.employee?.name || "-")}</td>
+        <td>${escapeHtml(reasonLabel(o.reason))}</td>
+        <td class="num">${fmtQty(o.quantity)}</td>
+        <td class="num">${fmtMoney(o.total_price)}</td>
+        <td>${movementStatusBadge(o.status)}</td>
+        <td class="actions">
+          ${o.status !== "cancelled" ? `<button class="btn icon-only sm danger" title="Cancelar" data-action="cancel" data-id="${o.id}"><i class="fa-solid fa-ban"></i></button>` : ""}
+        </td>
+      </tr>
+    `),
+    emptyState("fa-arrow-up-from-bracket", "Nenhuma saída registrada", "Registre requisições para baixar o saldo de estoque."),
+  );
+}
+
+function openOutputModal(defaults = {}) {
+  openModal({
+    title: "Registrar saída",
+    size: "lg",
+    body: `
+      <form id="output-form" class="form-grid">
+        <div class="field full">
+          <label>Produto</label>
+          <select name="product_id" required>
+            <option value="">Selecione</option>
+            ${movementProductOptions(defaults.product_id)}
+          </select>
+        </div>
+        <div class="field">
+          <label>Funcionário</label>
+          <select name="employee_id">
+            <option value="">Sem vínculo</option>
+            ${App.cache.employees.map((e) => `<option value="${e.id}">${escapeHtml(e.enrollment)} · ${escapeHtml(e.name)}</option>`).join("")}
+          </select>
+        </div>
+        <div class="field">
+          <label>Motivo</label>
+          <select name="reason">
+            <option value="consumption">Consumo</option>
+            <option value="sale">Venda</option>
+            <option value="loss">Perda</option>
+            <option value="transfer">Transferência</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Documento</label>
+          <input name="document" placeholder="REQ, OS ou referência">
+        </div>
+        <div class="field">
+          <label>Quantidade</label>
+          <input name="quantity" type="number" min="0.001" step="0.001" required>
+        </div>
+        <div class="field">
+          <label>Valor unitário</label>
+          <input name="unit_price" type="number" min="0" step="0.01">
+        </div>
+        <div class="field full">
+          <label>Destino</label>
+          <input name="destination" placeholder="Setor, obra, centro de custo">
+        </div>
+        <div class="field full">
+          <label>Observações</label>
+          <textarea name="notes"></textarea>
+        </div>
+      </form>
+    `,
+    footer: `
+      <button class="btn ghost" type="button" data-modal-close>Cancelar</button>
+      <button class="btn danger" type="submit" form="output-form">
+        <i class="fa-solid fa-check"></i> Confirmar saída
+      </button>
+    `,
+  });
+  $("#output-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    try {
+      await api("/api/outputs", { method: "POST", body: getFormData(event.currentTarget) });
+      closeModal();
+      toast("Saída registrada", "Saldo atualizado com sucesso.");
+      renderPage(App.currentPage);
+    } catch (error) {
+      toast("Erro ao registrar saída", error.message, "danger");
+    }
+  });
+}
+
+function cancelOutput(id) {
+  confirmAction(
+    "Cancelar saída",
+    "O saldo do produto será devolvido ao estoque.",
+    "Cancelar saída",
+    async () => {
+      await api(`/api/outputs/${id}`, { method: "DELETE" });
+      toast("Saída cancelada");
+      renderOutputs();
+    },
+  );
+}
+
+async function renderCategories() {
+  const data = await api("/api/categories");
+  pageWrap().innerHTML = `
+    ${pageHeader("categorias", "Agrupamento de produtos para relatórios, filtros e operação.", hasPermission("categories.manage") ? `
+      <button class="btn primary" id="new-category"><i class="fa-solid fa-plus"></i> Nova categoria</button>
+    ` : "")}
+    ${categoriesTable(data.items || [])}
+  `;
+  $("#new-category")?.addEventListener("click", () => openCategoryModal());
+  bindRowActions({
+    edit: (id) => openCategoryModal((data.items || []).find((item) => item.id === id)),
+    delete: (id) => deleteCategory(id),
+  });
+}
+
+function categoriesTable(items) {
+  return table(
+    [
+      { label: "Nome" },
+      { label: "Descrição" },
+      { label: "Produtos", cls: "num" },
+      { label: "Status" },
+      { label: "", cls: "actions" },
+    ],
+    items.map((c) => `
+      <tr>
+        <td>
+          <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${escapeHtml(c.color || "#1d4ed8")};margin-right:8px"></span>
+          <strong>${escapeHtml(c.name)}</strong>
+        </td>
+        <td>${escapeHtml(c.description || "-")}</td>
+        <td class="num">${fmtQty(c.products_count)}</td>
+        <td>${activeBadge(c.active)}</td>
+        <td class="actions">
+          <button class="btn icon-only sm" title="Editar" data-action="edit" data-id="${c.id}"><i class="fa-solid fa-pen"></i></button>
+          <button class="btn icon-only sm danger" title="Excluir" data-action="delete" data-id="${c.id}"><i class="fa-solid fa-trash"></i></button>
+        </td>
+      </tr>
+    `),
+    emptyState("fa-layer-group", "Nenhuma categoria", "Organize o catálogo por grupos de materiais."),
+  );
+}
+
+function openCategoryModal(category = null) {
+  openModal({
+    title: category ? "Editar categoria" : "Nova categoria",
+    body: `
+      <form id="category-form" class="form-grid">
+        <div class="field">
+          <label>Nome</label>
+          <input name="name" value="${escapeHtml(category?.name || "")}" required>
+        </div>
+        <div class="field">
+          <label>Cor</label>
+          <input name="color" type="color" value="${escapeHtml(category?.color || "#1d4ed8")}">
+        </div>
+        <div class="field full">
+          <label>Descrição</label>
+          <textarea name="description">${escapeHtml(category?.description || "")}</textarea>
+        </div>
+      </form>
+    `,
+    footer: `
+      <button class="btn ghost" type="button" data-modal-close>Cancelar</button>
+      <button class="btn primary" type="submit" form="category-form">Salvar</button>
+    `,
+  });
+  $("#category-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    try {
+      await api(category ? `/api/categories/${category.id}` : "/api/categories", {
+        method: category ? "PUT" : "POST",
+        body: getFormData(event.currentTarget),
+      });
+      closeModal();
+      toast("Categoria salva");
+      renderCategories();
+    } catch (error) {
+      toast("Erro ao salvar categoria", error.message, "danger");
+    }
+  });
+}
+
+function deleteCategory(id) {
+  confirmAction(
+    "Excluir categoria",
+    "A categoria só será removida se não houver produtos vinculados.",
+    "Excluir",
+    async () => {
+      await api(`/api/categories/${id}`, { method: "DELETE" });
+      toast("Categoria excluída");
+      renderCategories();
+    },
+  );
+}
+
+async function renderSuppliers(params = {}) {
+  const data = await api(`/api/suppliers${buildQuery({ page: params.page || 1, search: params.search })}`);
+  pageWrap().innerHTML = `
+    ${pageHeader("fornecedores", "Cadastro comercial para compras e recebimentos.", hasPermission("suppliers.manage") ? `
+      <button class="btn primary" id="new-supplier"><i class="fa-solid fa-plus"></i> Novo fornecedor</button>
+    ` : "")}
+    <div class="table-wrap">
+      ${toolbar({ id: "suppliers", placeholder: "Buscar por nome, CNPJ ou e-mail" })}
+      ${suppliersTable(data.items || [])}
+      ${pagination(data.meta, "suppliers")}
+    </div>
+  `;
+  $("#suppliers-search").value = params.search || "";
+  bindSearch("#suppliers-search", (value) => renderSuppliers({ ...params, page: 1, search: value }));
+  bindPagination("suppliers", (page) => renderSuppliers({ ...params, page }));
+  $("#new-supplier")?.addEventListener("click", () => openSupplierModal());
+  bindRowActions({
+    edit: (id) => openSupplierModal((data.items || []).find((item) => item.id === id)),
+    delete: (id) => deleteSupplier(id),
+  });
+}
+
+function suppliersTable(items) {
+  return tableBody(
+    [
+      { label: "Fornecedor" },
+      { label: "CNPJ" },
+      { label: "Contato" },
+      { label: "Cidade/UF" },
+      { label: "Status" },
+      { label: "", cls: "actions" },
+    ],
+    items.map((s) => `
+      <tr>
+        <td>
+          <strong>${escapeHtml(s.name)}</strong>
+          <div class="text-muted">${escapeHtml(s.email || "-")}</div>
+        </td>
+        <td class="mono">${escapeHtml(s.cnpj || "-")}</td>
+        <td>${escapeHtml(s.contact_person || "-")}<div class="text-muted">${escapeHtml(s.phone || "")}</div></td>
+        <td>${escapeHtml([s.city, s.state].filter(Boolean).join("/") || "-")}</td>
+        <td>${activeBadge(s.active)}</td>
+        <td class="actions">
+          <button class="btn icon-only sm" title="Editar" data-action="edit" data-id="${s.id}"><i class="fa-solid fa-pen"></i></button>
+          <button class="btn icon-only sm danger" title="Desativar" data-action="delete" data-id="${s.id}"><i class="fa-solid fa-ban"></i></button>
+        </td>
+      </tr>
+    `),
+    emptyState("fa-truck-fast", "Nenhum fornecedor", "Cadastre fornecedores para vincular compras e produtos."),
+  );
+}
+
+function supplierForm(s = {}) {
+  return `
+    <form id="supplier-form" class="form-grid">
+      <div class="field full">
+        <label>Nome/Razão social</label>
+        <input name="name" value="${escapeHtml(s.name || "")}" required>
+      </div>
+      <div class="field">
+        <label>CNPJ</label>
+        <input name="cnpj" value="${escapeHtml(s.cnpj || "")}">
+      </div>
+      <div class="field">
+        <label>Contato</label>
+        <input name="contact_person" value="${escapeHtml(s.contact_person || "")}">
+      </div>
+      <div class="field">
+        <label>E-mail</label>
+        <input name="email" type="email" value="${escapeHtml(s.email || "")}">
+      </div>
+      <div class="field">
+        <label>Telefone</label>
+        <input name="phone" value="${escapeHtml(s.phone || "")}">
+      </div>
+      <div class="field full">
+        <label>Endereço</label>
+        <input name="address" value="${escapeHtml(s.address || "")}">
+      </div>
+      <div class="field">
+        <label>Cidade</label>
+        <input name="city" value="${escapeHtml(s.city || "")}">
+      </div>
+      <div class="field">
+        <label>UF</label>
+        <input name="state" value="${escapeHtml(s.state || "")}" maxlength="2">
+      </div>
+      <div class="field full">
+        <label>Observações</label>
+        <textarea name="notes">${escapeHtml(s.notes || "")}</textarea>
+      </div>
+    </form>
+  `;
+}
+
+function openSupplierModal(supplier = null) {
+  openModal({
+    title: supplier ? "Editar fornecedor" : "Novo fornecedor",
+    size: "lg",
+    body: supplierForm(supplier || {}),
+    footer: `
+      <button class="btn ghost" type="button" data-modal-close>Cancelar</button>
+      <button class="btn primary" type="submit" form="supplier-form">Salvar</button>
+    `,
+  });
+  $("#supplier-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    try {
+      await api(supplier ? `/api/suppliers/${supplier.id}` : "/api/suppliers", {
+        method: supplier ? "PUT" : "POST",
+        body: getFormData(event.currentTarget),
+      });
+      closeModal();
+      toast("Fornecedor salvo");
+      renderSuppliers();
+    } catch (error) {
+      toast("Erro ao salvar fornecedor", error.message, "danger");
+    }
+  });
+}
+
+function deleteSupplier(id) {
+  confirmAction(
+    "Desativar fornecedor",
+    "O fornecedor será mantido para histórico e ocultado de novas operações.",
+    "Desativar",
+    async () => {
+      await api(`/api/suppliers/${id}`, { method: "DELETE" });
+      toast("Fornecedor desativado");
+      renderSuppliers();
+    },
+  );
+}
+
+async function renderEmployees(params = {}) {
+  const data = await api(`/api/employees${buildQuery({ page: params.page || 1, search: params.search, status: params.status })}`);
+  pageWrap().innerHTML = `
+    ${pageHeader("funcionarios", "Equipe operacional vinculada às requisições e movimentações.", hasPermission("employees.manage") ? `
+      <button class="btn primary" id="new-employee"><i class="fa-solid fa-plus"></i> Novo funcionário</button>
+    ` : "")}
+    <div class="table-wrap">
+      ${toolbar({
+        id: "employees",
+        placeholder: "Buscar por nome, matrícula, CPF ou setor",
+        filters: `
+          <select id="employees-status">
+            <option value="">Todos</option>
+            <option value="active" ${params.status === "active" ? "selected" : ""}>Ativos</option>
+            <option value="leave" ${params.status === "leave" ? "selected" : ""}>Afastados</option>
+            <option value="terminated" ${params.status === "terminated" ? "selected" : ""}>Desligados</option>
+          </select>
+        `,
+      })}
+      ${employeesTable(data.items || [])}
+      ${pagination(data.meta, "employees")}
+    </div>
+  `;
+  $("#employees-search").value = params.search || "";
+  bindSearch("#employees-search", (value) => renderEmployees({ ...params, page: 1, search: value }));
+  $("#employees-status").addEventListener("change", (event) => renderEmployees({ ...params, page: 1, status: event.target.value }));
+  bindPagination("employees", (page) => renderEmployees({ ...params, page }));
+  $("#new-employee")?.addEventListener("click", () => openEmployeeModal());
+  bindRowActions({
+    edit: (id) => openEmployeeModal((data.items || []).find((item) => item.id === id)),
+    delete: (id) => deleteEmployee(id),
+  });
+}
+
+function employeesTable(items) {
+  return tableBody(
+    [
+      { label: "Matrícula" },
+      { label: "Funcionário" },
+      { label: "Setor" },
+      { label: "Cargo" },
+      { label: "Contato" },
+      { label: "Status" },
+      { label: "", cls: "actions" },
+    ],
+    items.map((e) => `
+      <tr>
+        <td class="mono">${escapeHtml(e.enrollment)}</td>
+        <td>
+          <strong>${escapeHtml(e.name)}</strong>
+          <div class="text-muted">${escapeHtml(e.cpf || "-")}</div>
+        </td>
+        <td>${escapeHtml(e.department || "-")}</td>
+        <td>${escapeHtml(e.position || "-")}</td>
+        <td>${escapeHtml(e.email || "-")}<div class="text-muted">${escapeHtml(e.phone || "")}</div></td>
+        <td>${userStatusBadge(e.status)}</td>
+        <td class="actions">
+          <button class="btn icon-only sm" title="Editar" data-action="edit" data-id="${e.id}"><i class="fa-solid fa-pen"></i></button>
+          <button class="btn icon-only sm danger" title="Desligar" data-action="delete" data-id="${e.id}"><i class="fa-solid fa-user-slash"></i></button>
+        </td>
+      </tr>
+    `),
+    emptyState("fa-users", "Nenhum funcionário", "Cadastre colaboradores para rastrear requisições internas."),
+  );
+}
+
+function employeeForm(e = {}) {
+  return `
+    <form id="employee-form" class="form-grid">
+      <div class="field">
+        <label>Matrícula</label>
+        <input name="enrollment" value="${escapeHtml(e.enrollment || "")}" ${e.id ? "readonly" : ""} placeholder="Automática se vazio">
+      </div>
+      <div class="field">
+        <label>CPF</label>
+        <input name="cpf" value="${escapeHtml(e.cpf || "")}">
+      </div>
+      <div class="field full">
+        <label>Nome</label>
+        <input name="name" value="${escapeHtml(e.name || "")}" required>
+      </div>
+      <div class="field">
+        <label>E-mail</label>
+        <input name="email" type="email" value="${escapeHtml(e.email || "")}">
+      </div>
+      <div class="field">
+        <label>Telefone</label>
+        <input name="phone" value="${escapeHtml(e.phone || "")}">
+      </div>
+      <div class="field">
+        <label>Setor</label>
+        <input name="department" value="${escapeHtml(e.department || "")}">
+      </div>
+      <div class="field">
+        <label>Cargo</label>
+        <input name="position" value="${escapeHtml(e.position || "")}">
+      </div>
+      <div class="field">
+        <label>Status</label>
+        <select name="status">
+          <option value="active" ${e.status === "active" ? "selected" : ""}>Ativo</option>
+          <option value="leave" ${e.status === "leave" ? "selected" : ""}>Afastado</option>
+          <option value="terminated" ${e.status === "terminated" ? "selected" : ""}>Desligado</option>
+        </select>
+      </div>
+      <div class="field full">
+        <label>Observações</label>
+        <textarea name="notes">${escapeHtml(e.notes || "")}</textarea>
+      </div>
+    </form>
+  `;
+}
+
+function openEmployeeModal(employee = null) {
+  openModal({
+    title: employee ? "Editar funcionário" : "Novo funcionário",
+    size: "lg",
+    body: employeeForm(employee || {}),
+    footer: `
+      <button class="btn ghost" type="button" data-modal-close>Cancelar</button>
+      <button class="btn primary" type="submit" form="employee-form">Salvar</button>
+    `,
+  });
+  $("#employee-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    try {
+      await api(employee ? `/api/employees/${employee.id}` : "/api/employees", {
+        method: employee ? "PUT" : "POST",
+        body: getFormData(event.currentTarget),
+      });
+      closeModal();
+      toast("Funcionário salvo");
+      renderEmployees();
+    } catch (error) {
+      toast("Erro ao salvar funcionário", error.message, "danger");
+    }
+  });
+}
+
+function deleteEmployee(id) {
+  confirmAction(
+    "Desligar funcionário",
+    "O funcionário ficará com status desligado e permanecerá no histórico.",
+    "Desligar",
+    async () => {
+      await api(`/api/employees/${id}`, { method: "DELETE" });
+      toast("Funcionário desligado");
+      renderEmployees();
+    },
+  );
+}
+
+async function renderEnrollments(params = {}) {
+  const data = await api(`/api/employees${buildQuery({ page: params.page || 1, search: params.search })}`);
+  pageWrap().innerHTML = `
+    ${pageHeader("matriculas", "Consulta rápida de matrículas, setores e vínculos operacionais.")}
+    <div class="table-wrap">
+      ${toolbar({ id: "enrollments", placeholder: "Buscar matrícula, nome ou setor" })}
+      ${tableBody(
+        [
+          { label: "Matrícula" },
+          { label: "Nome" },
+          { label: "Setor" },
+          { label: "Cargo" },
+          { label: "Admissão" },
+          { label: "Status" },
+        ],
+        (data.items || []).map((e) => `
+          <tr>
+            <td class="mono"><strong>${escapeHtml(e.enrollment)}</strong></td>
+            <td>${escapeHtml(e.name)}</td>
+            <td>${escapeHtml(e.department || "-")}</td>
+            <td>${escapeHtml(e.position || "-")}</td>
+            <td>${fmtDate(e.hire_date, false)}</td>
+            <td>${userStatusBadge(e.status)}</td>
+          </tr>
+        `),
+        emptyState("fa-id-card", "Nenhuma matrícula", "As matrículas cadastradas em funcionários aparecerão aqui."),
+      )}
+      ${pagination(data.meta, "enrollments")}
+    </div>
+  `;
+  $("#enrollments-search").value = params.search || "";
+  bindSearch("#enrollments-search", (value) => renderEnrollments({ ...params, page: 1, search: value }));
+  bindPagination("enrollments", (page) => renderEnrollments({ ...params, page }));
+}
+
+async function renderReports() {
+  const summary = await api("/api/reports/summary?days=30");
+  pageWrap().innerHTML = `
+    ${pageHeader("relatorios", "Indicadores e exportações gerenciais em PDF e Excel.", `
+      <a class="btn ghost" href="/api/reports/export/stock.xlsx"><i class="fa-solid fa-file-excel"></i> Estoque Excel</a>
+      <a class="btn ghost" href="/api/reports/export/stock.pdf"><i class="fa-solid fa-file-pdf"></i> Estoque PDF</a>
+      <a class="btn ghost" href="/api/reports/export/movements.xlsx"><i class="fa-solid fa-file-lines"></i> Movimentações</a>
+    `)}
+    <div class="kpi-grid">
+      ${kpiCard("Entradas", summary.entries_count, `${fmtQty(summary.total_in)} unidades`, "fa-arrow-down-to-bracket", "green")}
+      ${kpiCard("Saídas", summary.outputs_count, `${fmtQty(summary.total_out)} unidades`, "fa-arrow-up-from-bracket", "red")}
+      ${kpiCard("Valor recebido", fmtMoney(summary.value_in), "Últimos 30 dias", "fa-file-invoice-dollar", "cyan")}
+      ${kpiCard("Valor de saída", fmtMoney(summary.value_out), "Últimos 30 dias", "fa-receipt", "amber")}
+    </div>
+    <section class="panel">
+      <div class="panel-head">
+        <h3>Exportações disponíveis</h3>
+      </div>
+      <div class="panel-body">
+        <table class="data-table">
+          <tbody>
+            <tr>
+              <td><strong>Relatório de estoque</strong><div class="text-muted">Saldos, custos, categorias e status</div></td>
+              <td class="actions">
+                <a class="btn sm ghost" href="/api/reports/export/stock.xlsx"><i class="fa-solid fa-file-excel"></i> Excel</a>
+                <a class="btn sm ghost" href="/api/reports/export/stock.pdf"><i class="fa-solid fa-file-pdf"></i> PDF</a>
+              </td>
+            </tr>
+            <tr>
+              <td><strong>Relatório de movimentações</strong><div class="text-muted">Entradas e saídas dos últimos 30 dias</div></td>
+              <td class="actions">
+                <a class="btn sm ghost" href="/api/reports/export/movements.xlsx"><i class="fa-solid fa-file-excel"></i> Excel</a>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  `;
+}
+
+async function renderActivities(params = {}) {
+  const data = await api(`/api/activities${buildQuery({ page: params.page || 1, action: params.action, entity: params.entity })}`);
+  pageWrap().innerHTML = `
+    ${pageHeader("atividades", "Auditoria de ações realizadas pelos usuários do sistema.")}
+    <div class="table-wrap">
+      ${toolbar({
+        id: "activities",
+        placeholder: "Filtro por entidade",
+        filters: `
+          <select id="activities-action">
+            <option value="">Todas as ações</option>
+            <option value="login" ${params.action === "login" ? "selected" : ""}>Login</option>
+            <option value="create" ${params.action === "create" ? "selected" : ""}>Criação</option>
+            <option value="update" ${params.action === "update" ? "selected" : ""}>Atualização</option>
+            <option value="delete" ${params.action === "delete" ? "selected" : ""}>Exclusão/cancelamento</option>
+            <option value="entry" ${params.action === "entry" ? "selected" : ""}>Entrada</option>
+            <option value="output" ${params.action === "output" ? "selected" : ""}>Saída</option>
+            <option value="export" ${params.action === "export" ? "selected" : ""}>Exportação</option>
+          </select>
+        `,
+      })}
+      ${activitiesTable(data.items || [])}
+      ${pagination(data.meta, "activities")}
+    </div>
+  `;
+  $("#activities-search").value = params.entity || "";
+  bindSearch("#activities-search", (value) => renderActivities({ ...params, page: 1, entity: value }));
+  $("#activities-action").addEventListener("change", (event) => renderActivities({ ...params, page: 1, action: event.target.value }));
+  bindPagination("activities", (page) => renderActivities({ ...params, page }));
+}
+
+function activitiesTable(items) {
+  return tableBody(
+    [
+      { label: "Data" },
+      { label: "Usuário" },
+      { label: "Ação" },
+      { label: "Entidade" },
+      { label: "Descrição" },
+      { label: "IP" },
+    ],
+    items.map((a) => `
+      <tr>
+        <td>${fmtDate(a.created_at)}</td>
+        <td>${escapeHtml(a.user?.name || "Sistema")}</td>
+        <td><span class="badge info">${escapeHtml(a.action)}</span></td>
+        <td>${escapeHtml(a.entity)} ${a.entity_id ? `<span class="text-muted">#${a.entity_id}</span>` : ""}</td>
+        <td>${escapeHtml(a.description || "-")}</td>
+        <td class="mono">${escapeHtml(a.ip || "-")}</td>
+      </tr>
+    `),
+    emptyState("fa-clock-rotate-left", "Sem atividades", "Os logs de auditoria aparecerão conforme o sistema for usado."),
+  );
+}
+
+async function renderUsers(params = {}) {
+  await loadLookupData(["roles"]);
+  const data = await api(`/api/users${buildQuery({ search: params.search })}`);
+  pageWrap().innerHTML = `
+    ${pageHeader("usuarios", "Controle de acesso, perfis e permissões por função.", hasPermission("users.manage") ? `
+      <button class="btn primary" id="new-user"><i class="fa-solid fa-plus"></i> Novo usuário</button>
+    ` : "")}
+    <div class="table-wrap">
+      ${toolbar({ id: "users", placeholder: "Buscar por nome ou e-mail" })}
+      ${usersTable(data.items || [])}
+    </div>
+  `;
+  $("#users-search").value = params.search || "";
+  bindSearch("#users-search", (value) => renderUsers({ ...params, search: value }));
+  $("#new-user")?.addEventListener("click", () => openUserModal());
+  bindRowActions({
+    edit: (id) => openUserModal((data.items || []).find((item) => item.id === id)),
+    delete: (id) => deleteUser(id),
+  });
+}
+
+function usersTable(items) {
+  return tableBody(
+    [
+      { label: "Usuário" },
+      { label: "Perfil" },
+      { label: "Telefone" },
+      { label: "Último login" },
+      { label: "Status" },
+      { label: "", cls: "actions" },
+    ],
+    items.map((u) => `
+      <tr>
+        <td>
+          <strong>${escapeHtml(u.name)}</strong>
+          <div class="text-muted">${escapeHtml(u.email)}</div>
+        </td>
+        <td>${escapeHtml(roleLabel(u.role))}</td>
+        <td>${escapeHtml(u.phone || "-")}</td>
+        <td>${fmtDate(u.last_login_at)}</td>
+        <td>${userStatusBadge(u.status)}</td>
+        <td class="actions">
+          <button class="btn icon-only sm" title="Editar" data-action="edit" data-id="${u.id}"><i class="fa-solid fa-pen"></i></button>
+          <button class="btn icon-only sm danger" title="Desativar" data-action="delete" data-id="${u.id}"><i class="fa-solid fa-ban"></i></button>
+        </td>
+      </tr>
+    `),
+    emptyState("fa-user-shield", "Nenhum usuário", "Usuários autorizados aparecerão nesta tela."),
+  );
+}
+
+function userForm(u = {}) {
+  return `
+    <form id="user-form" class="form-grid">
+      <div class="field full">
+        <label>Nome</label>
+        <input name="name" value="${escapeHtml(u.name || "")}" required>
+      </div>
+      <div class="field full">
+        <label>E-mail</label>
+        <input name="email" type="email" value="${escapeHtml(u.email || "")}" ${u.id ? "readonly" : "required"}>
+      </div>
+      <div class="field">
+        <label>Telefone</label>
+        <input name="phone" value="${escapeHtml(u.phone || "")}">
+      </div>
+      <div class="field">
+        <label>Perfil</label>
+        <select name="role_id">
+          <option value="">Sem perfil</option>
+          ${optionList(App.cache.roles, u.role?.id, "label")}
+        </select>
+      </div>
+      <div class="field">
+        <label>Status</label>
+        <select name="status">
+          <option value="active" ${u.status === "active" ? "selected" : ""}>Ativo</option>
+          <option value="inactive" ${u.status === "inactive" ? "selected" : ""}>Inativo</option>
+          <option value="blocked" ${u.status === "blocked" ? "selected" : ""}>Bloqueado</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>${u.id ? "Nova senha" : "Senha"}</label>
+        <input name="password" type="password" ${u.id ? "" : "required"} minlength="6">
+      </div>
+    </form>
+  `;
+}
+
+function openUserModal(user = null) {
+  openModal({
+    title: user ? "Editar usuário" : "Novo usuário",
+    body: userForm(user || {}),
+    footer: `
+      <button class="btn ghost" type="button" data-modal-close>Cancelar</button>
+      <button class="btn primary" type="submit" form="user-form">Salvar</button>
+    `,
+  });
+  $("#user-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    try {
+      const data = getFormData(event.currentTarget);
+      await api(user ? `/api/users/${user.id}` : "/api/users", {
+        method: user ? "PUT" : "POST",
+        body: data,
+      });
+      closeModal();
+      toast("Usuário salvo");
+      renderUsers();
+    } catch (error) {
+      toast("Erro ao salvar usuário", error.message, "danger");
+    }
+  });
+}
+
+function deleteUser(id) {
+  confirmAction(
+    "Desativar usuário",
+    "O acesso do usuário será desativado imediatamente.",
+    "Desativar",
+    async () => {
+      await api(`/api/users/${id}`, { method: "DELETE" });
+      toast("Usuário desativado");
+      renderUsers();
+    },
+  );
+}
+
+async function renderSettings() {
+  await loadLookupData(["locations"]);
+  const company = await api("/api/company");
+  pageWrap().innerHTML = `
+    ${pageHeader("configuracoes", "Dados da empresa, locais de estoque e bases para integrações futuras.")}
+    <div class="grid-2">
+      <section class="panel">
+        <div class="panel-head"><h3>Empresa</h3></div>
+        <div class="panel-body">
+          <form id="company-form" class="form-grid">
+            <div class="field full">
+              <label>Nome fantasia</label>
+              <input name="name" value="${escapeHtml(company.name || "")}" required>
+            </div>
+            <div class="field full">
+              <label>Razão social</label>
+              <input name="legal_name" value="${escapeHtml(company.legal_name || "")}">
+            </div>
+            <div class="field">
+              <label>CNPJ</label>
+              <input name="cnpj" value="${escapeHtml(company.cnpj || "")}">
+            </div>
+            <div class="field">
+              <label>E-mail</label>
+              <input name="email" type="email" value="${escapeHtml(company.email || "")}">
+            </div>
+            <div class="field">
+              <label>Telefone</label>
+              <input name="phone" value="${escapeHtml(company.phone || "")}">
+            </div>
+            <div class="field">
+              <label>CEP</label>
+              <input name="zipcode" value="${escapeHtml(company.zipcode || "")}">
+            </div>
+            <div class="field full">
+              <label>Endereço</label>
+              <input name="address" value="${escapeHtml(company.address || "")}">
+            </div>
+            <div class="field">
+              <label>Cidade</label>
+              <input name="city" value="${escapeHtml(company.city || "")}">
+            </div>
+            <div class="field">
+              <label>UF</label>
+              <input name="state" value="${escapeHtml(company.state || "")}" maxlength="2">
+            </div>
+            <div class="field full">
+              <button class="btn primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> Salvar empresa</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h3>Locais de estoque</h3>
+          <button class="btn sm ghost" id="new-location"><i class="fa-solid fa-plus"></i> Adicionar</button>
+        </div>
+        <div class="panel-body">
+          ${locationsTable(App.cache.locations)}
+        </div>
+      </section>
+    </div>
+    <section class="panel">
+      <div class="panel-head"><h3>Preparação técnica</h3></div>
+      <div class="panel-body">
+        <table class="data-table">
+          <tbody>
+            <tr>
+              <td><strong>Pagamentos e planos</strong><div class="text-muted">Estrutura multiempresa, usuários, perfis e configuração por ambiente já separadas para integração posterior.</div></td>
+              <td>${statusBadge("ready", { ready: { label: "Base pronta", cls: "info" } })}</td>
+            </tr>
+            <tr>
+              <td><strong>Aplicativo mobile</strong><div class="text-muted">APIs REST autenticadas e rotas por módulo estão disponíveis para consumo por app.</div></td>
+              <td>${statusBadge("ready", { ready: { label: "API pronta", cls: "info" } })}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  `;
+
+  $("#company-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    try {
+      await api("/api/company", { method: "PUT", body: getFormData(event.currentTarget) });
+      toast("Empresa atualizada");
+      renderSettings();
+    } catch (error) {
+      toast("Erro ao salvar empresa", error.message, "danger");
+    }
+  });
+  $("#new-location").addEventListener("click", openLocationModal);
+}
+
+function locationsTable(items) {
+  if (!items.length) {
+    return emptyState("fa-location-dot", "Nenhum local", "Cadastre depósitos, almoxarifados ou endereços internos.");
+  }
+  return `
+    <table class="data-table">
+      <thead><tr><th>Código</th><th>Local</th><th>Status</th></tr></thead>
+      <tbody>
+        ${items.map((l) => `
+          <tr>
+            <td class="mono">${escapeHtml(l.code)}</td>
+            <td><strong>${escapeHtml(l.name)}</strong><div class="text-muted">${escapeHtml(l.description || "")}</div></td>
+            <td>${activeBadge(l.active)}</td>
+          </tr>
+        `).join("")}
+      </tbody>
+    </table>
+  `;
+}
+
+function openLocationModal() {
+  openModal({
+    title: "Novo local de estoque",
+    body: `
+      <form id="location-form" class="form-grid">
+        <div class="field">
+          <label>Código</label>
+          <input name="code" required>
+        </div>
+        <div class="field">
+          <label>Nome</label>
+          <input name="name" required>
+        </div>
+        <div class="field full">
+          <label>Descrição</label>
+          <textarea name="description"></textarea>
+        </div>
+      </form>
+    `,
+    footer: `
+      <button class="btn ghost" type="button" data-modal-close>Cancelar</button>
+      <button class="btn primary" type="submit" form="location-form">Salvar</button>
+    `,
+  });
+  $("#location-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    try {
+      await api("/api/locations", { method: "POST", body: getFormData(event.currentTarget) });
+      closeModal();
+      toast("Local cadastrado");
+      renderSettings();
+    } catch (error) {
+      toast("Erro ao salvar local", error.message, "danger");
+    }
+  });
+}
+
+function bindSearch(selector, callback) {
+  const input = $(selector);
+  let timer = null;
+  input.addEventListener("input", () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => callback(input.value.trim()), 300);
+  });
+}
+
+function bindRowActions(actions) {
+  const root = pageWrap();
+  root._rowActions = actions;
+  if (root._rowActionsBound) return;
+  root._rowActionsBound = true;
+  root.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-action][data-id]");
+    if (!button) return;
+    const action = root._rowActions?.[button.dataset.action];
+    if (!action) return;
+    action(Number(button.dataset.id));
+  });
+}
+
+async function loadNotifications() {
+  if (!App.user) return;
+  try {
+    const data = await api("/api/notifications");
+    const count = $("#notif-count");
+    count.textContent = data.unread || 0;
+    count.classList.toggle("show", Number(data.unread || 0) > 0);
+    $("#notif-list").innerHTML = notificationItems(data.items || []);
+  } catch {
+    $("#notif-list").innerHTML = emptyState("fa-bell-slash", "Notificações indisponíveis", "Tente novamente em alguns instantes.");
+  }
+}
+
+function notificationItems(items) {
+  if (!items.length) {
+    return emptyState("fa-bell", "Sem notificações", "Alertas operacionais aparecerão aqui.");
+  }
+  return items.map((n) => `
+    <div class="notif-item ${escapeHtml(n.type)} ${n.read ? "" : "unread"}" data-notif-id="${n.id}">
+      <div class="ni-icon"><i class="fa-solid ${n.type === "warning" ? "fa-triangle-exclamation" : "fa-circle-info"}"></i></div>
+      <div class="ni-body">
+        <strong>${escapeHtml(n.title)}</strong>
+        <p>${escapeHtml(n.message || "")}</p>
+        <small>${fmtDate(n.created_at)}</small>
+      </div>
+    </div>
+  `).join("");
+}
+
+function openChangePasswordModal() {
+  openModal({
+    title: "Trocar senha",
+    body: `
+      <form id="password-form" class="form-grid">
+        <div class="field full">
+          <label>Senha atual</label>
+          <input name="current_password" type="password" required>
+        </div>
+        <div class="field full">
+          <label>Nova senha</label>
+          <input name="new_password" type="password" required minlength="6">
+        </div>
+      </form>
+    `,
+    footer: `
+      <button class="btn ghost" type="button" data-modal-close>Cancelar</button>
+      <button class="btn primary" type="submit" form="password-form">Atualizar senha</button>
+    `,
+  });
+  $("#password-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    try {
+      await api("/api/auth/change-password", {
+        method: "POST",
+        body: getFormData(event.currentTarget),
+      });
+      closeModal();
+      toast("Senha alterada");
+    } catch (error) {
+      toast("Erro ao trocar senha", error.message, "danger");
+    }
+  });
+}
+
+function bindShellEvents() {
+  $("#login-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const button = event.currentTarget.querySelector("button[type='submit']");
+    const error = $("#login-error");
+    error.textContent = "";
+    button.disabled = true;
+    try {
+      const data = await api("/api/auth/login", {
+        method: "POST",
+        body: {
+          email: $("#login-email").value,
+          password: $("#login-password").value,
+          remember: $("#login-remember").checked,
+        },
+      });
+      App.user = data.user;
+      await checkSession();
+      navigate(pageFromPath(), true);
+      toast("Bem-vindo", "Sessão iniciada com sucesso.");
+    } catch (err) {
+      error.textContent = err.message;
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  $all(".menu-item").forEach((item) => {
+    item.addEventListener("click", () => {
+      $("#sidebar").classList.remove("show-mobile");
+      navigate(item.dataset.page);
+    });
+  });
+
+  $("#sidebar-toggle").addEventListener("click", () => {
+    $("#sidebar").classList.toggle("collapsed");
+  });
+
+  $("#mobile-menu").addEventListener("click", () => {
+    $("#sidebar").classList.toggle("show-mobile");
+  });
+
+  $("#user-box").addEventListener("click", (event) => {
+    event.stopPropagation();
+    $("#user-menu").classList.toggle("show");
+  });
+
+  document.addEventListener("click", () => {
+    $("#user-menu").classList.remove("show");
+    $("#notif-drawer").classList.remove("show");
+  });
+
+  $("#user-menu").addEventListener("click", async (event) => {
+    const item = event.target.closest("[data-action]");
+    if (!item) return;
+    event.stopPropagation();
+    const action = item.dataset.action;
+    $("#user-menu").classList.remove("show");
+    if (action === "logout") {
+      await api("/api/auth/logout", { method: "POST" });
+      toast("Sessão encerrada");
+      showAuth();
+    } else if (action === "settings") {
+      navigate("configuracoes");
+    } else if (action === "change-password") {
+      openChangePasswordModal();
+    } else if (action === "profile") {
+      openModal({
+        title: "Meu perfil",
+        body: `
+          <table class="data-table">
+            <tbody>
+              <tr><td>Nome</td><td><strong>${escapeHtml(App.user?.name)}</strong></td></tr>
+              <tr><td>E-mail</td><td>${escapeHtml(App.user?.email)}</td></tr>
+              <tr><td>Perfil</td><td>${escapeHtml(roleLabel(App.user?.role))}</td></tr>
+              <tr><td>Status</td><td>${userStatusBadge(App.user?.status)}</td></tr>
+            </tbody>
+          </table>
+        `,
+        footer: `<button class="btn primary" type="button" data-modal-close>Fechar</button>`,
+      });
+    }
+  });
+
+  $("#notif-btn").addEventListener("click", (event) => {
+    event.stopPropagation();
+    $("#notif-drawer").classList.toggle("show");
+  });
+
+  $("#notif-drawer").addEventListener("click", (event) => {
+    event.stopPropagation();
+    const item = event.target.closest("[data-notif-id]");
+    if (!item) return;
+    api(`/api/notifications/${item.dataset.notifId}/read`, { method: "POST" })
+      .then(loadNotifications)
+      .catch(() => {});
+  });
+
+  $("#notif-readall").addEventListener("click", () => {
+    api("/api/notifications/read-all", { method: "POST" })
+      .then(loadNotifications)
+      .catch((error) => toast("Erro nas notificações", error.message, "danger"));
+  });
+
+  $("#global-search").addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    navigate("produtos");
+    setTimeout(() => {
+      renderProducts({ search: event.currentTarget.value.trim() });
+    }, 0);
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+      event.preventDefault();
+      $("#global-search").focus();
+    }
+    if (event.key === "Escape") {
+      closeModal();
+      $("#sidebar").classList.remove("show-mobile");
+    }
+  });
+
+  window.addEventListener("popstate", () => renderPage(pageFromPath()));
+}
+
+async function boot() {
+  $("#auth-year").textContent = new Date().getFullYear();
+  bindShellEvents();
+  try {
+    if (await checkSession()) {
+      navigate(pageFromPath(), true);
+    }
+  } catch {
+    showAuth();
+  }
+}
+
+document.addEventListener("DOMContentLoaded", boot);
