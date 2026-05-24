@@ -17,6 +17,10 @@ def create_app(config_class: type = Config) -> Flask:
     )
     app.config.from_object(config_class)
 
+    # Garantir estrutura de pastas para imagens
+    banners_path = os.path.join(app.static_folder, "img", "banners")
+    os.makedirs(banners_path, exist_ok=True)
+
     # Extensions
     db.init_app(app)
     migrate.init_app(app, db)

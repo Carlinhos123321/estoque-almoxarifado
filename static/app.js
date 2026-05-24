@@ -16,6 +16,7 @@ const App = {
     roles: [],
     locations: [],
   },
+  carouselInterval: null,
 };
 
 const Pages = {
@@ -426,6 +427,10 @@ async function loadLookupData(types = ["categories", "suppliers", "products", "e
 function destroyCharts() {
   Object.values(App.charts).forEach((chart) => chart?.destroy?.());
   App.charts = {};
+  if (App.carouselInterval) {
+    clearInterval(App.carouselInterval);
+    App.carouselInterval = null;
+  }
 }
 
 function renderLineChart(canvasId, labels, entries, outputs) {
@@ -630,6 +635,11 @@ async function renderDashboard() {
         ? "Visão executiva do almoxarifado e operação logística." 
         : "Bem-vindo! Comece cadastrando seus primeiros produtos para ativar as estatísticas do painel."
     )}
+
+    <div class="dashboard-banner">
+      ${dashboardCarousel(data.banners || [])}
+    </div>
+
     <div class="kpi-grid">
       ${kpiCard("Produtos", kpi.total_products, "Cadastrados no catálogo", "fa-barcode")}
       ${kpiCard("Estoque atual", fmtQty(kpi.total_units), "Unidades totais", "fa-boxes-stacked", "green")}
@@ -694,6 +704,97 @@ async function renderDashboard() {
     categories.map((item) => item.name),
     categories.map((item) => item.count),
   );
+
+  if (data.banners?.length) {
+    initDashboardCarousel();
+  }
+}
+
+function dashboardCarousel(banners) {
+  if (!banners.length) return "";
+  
+  // Estilização mínima injetada para garantir o funcionamento visual
+  const style = `
+    <style>
+      .dashboard-banner { margin-bottom: 2rem; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+      .carousel { position: relative; width: 100%; height: 320px; background: #1e293b; }
+      .carousel-inner { position: relative; width: 100%; height: 100%; }
+      .carousel-item { 
+        position: absolute; inset: 0; opacity: 0; transition: opacity 0.8s ease-in-out; 
+        background-size: cover; background-position: center; display: flex; align-items: flex-end;
+      }
+      .carousel-item.active { opacity: 1; z-index: 1; }
+      .carousel-caption { 
+        padding: 40px; color: white; width: 100%;
+        background: linear-gradient(transparent, rgba(0,0,0,0.8));
+      }
+      .carousel-caption h2 { font-size: 2rem; margin-bottom: 8px; font-weight: 700; }
+      .carousel-caption p { font-size: 1.1rem; opacity: 0.9; }
+      .carousel-nav { 
+        position: absolute; bottom: 20px; right: 20px; z-index: 10; display: flex; gap: 8px;
+      }
+      .nav-dot { 
+        width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.3); 
+        border: none; cursor: pointer; transition: all 0.3s;
+      }
+      .nav-dot.active { background: white; transform: scale(1.2); }
+      @media (max-width: 768px) {
+        .carousel { height: 240px; }
+        .carousel-caption h2 { font-size: 1.5rem; }
+        .carousel-caption p { font-size: 0.9rem; }
+      }
+    </style>
+  `;
+
+  return `
+    ${style}
+    <div class="carousel" id="main-carousel">
+      <div class="carousel-inner">
+        ${banners.map((b, i) => `
+          <div class="carousel-item ${i === 0 ? "active" : ""}" style="background-image: url('${b.image}')">
+            <div class="carousel-caption">
+              <h2>${escapeHtml(b.title)}</h2>
+              <p>${escapeHtml(b.desc)}</p>
+            </div>
+          </div>
+        `).join("")}
+      </div>
+      <div class="carousel-nav">
+        ${banners.map((_, i) => `<button class="nav-dot ${i === 0 ? "active" : ""}" data-index="${i}"></button>`).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function initDashboardCarousel() {
+  const carousel = $("#main-carousel");
+  if (!carousel) return;
+  const items = $all(".carousel-item", carousel);
+  const dots = $all(".nav-dot", carousel);
+  let current = 0;
+
+  const show = (index) => {
+    items.forEach((it, i) => it.classList.toggle("active", i === index));
+    dots.forEach((d, i) => d.classList.toggle("active", i === index));
+    current = index;
+  };
+
+  dots.forEach((dot) => {
+    dot.addEventListener("click", () => {
+      show(Number(dot.dataset.index));
+      // Reset timer on manual click
+      clearInterval(App.carouselInterval);
+      startTimer();
+    });
+  });
+
+  const startTimer = () => {
+    App.carouselInterval = setInterval(() => {
+      show((current + 1) % items.length);
+    }, 5000);
+  };
+
+  startTimer();
 }
 
 function kpiCard(label, value, delta, icon, color = "") {
