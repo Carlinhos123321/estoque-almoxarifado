@@ -624,7 +624,12 @@ async function renderDashboard() {
   const data = await api("/api/dashboard");
   const kpi = data.kpi || {};
   pageWrap().innerHTML = `
-    ${pageHeader("dashboard", "Visão executiva do almoxarifado e operação logística.")}
+    ${pageHeader(
+      "dashboard",
+      kpi.total_products > 0 
+        ? "Visão executiva do almoxarifado e operação logística." 
+        : "Bem-vindo! Comece cadastrando seus primeiros produtos para ativar as estatísticas do painel."
+    )}
     <div class="kpi-grid">
       ${kpiCard("Produtos", kpi.total_products, "Cadastrados no catálogo", "fa-barcode")}
       ${kpiCard("Estoque atual", fmtQty(kpi.total_units), "Unidades totais", "fa-boxes-stacked", "green")}
@@ -706,7 +711,7 @@ function kpiCard(label, value, delta, icon, color = "") {
 
 function dashboardTopProducts(items) {
   if (!items.length) {
-    return emptyState("fa-chart-simple", "Sem movimentações", "Ainda não há saídas no período analisado.");
+    return emptyState("fa-chart-simple", "Nenhuma movimentação encontrada", "Comece cadastrando seus primeiros produtos para visualizar este ranking.");
   }
   return table(
     [
@@ -723,13 +728,13 @@ function dashboardTopProducts(items) {
         <td class="num">${fmtQty(p.stock)}</td>
       </tr>
     `),
-    emptyState("fa-chart-simple", "Sem movimentações", "Ainda não há dados."),
+    emptyState("fa-chart-simple", "Nenhuma movimentação encontrada", "Nenhum produto saiu do estoque nos últimos 30 dias."),
   );
 }
 
 function activityList(items) {
   if (!items.length) {
-    return emptyState("fa-clock-rotate-left", "Sem atividades", "As ações auditadas aparecerão aqui.");
+    return emptyState("fa-clock-rotate-left", "Nenhuma atividade encontrada", "As ações do sistema aparecerão aqui conforme você utiliza o ERP.");
   }
   return `
     <div class="activity-timeline">

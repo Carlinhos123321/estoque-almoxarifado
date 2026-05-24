@@ -68,25 +68,23 @@ def _to_decimal(v, default="0"):
 @require_permission("dashboard.view", api=True)
 def dashboard():
     cid = _company_id()
-    pq = Product.query.filter_by(company_id=cid) if cid else Product.query
-    eq = StockEntry.query.filter_by(company_id=cid) if cid else StockEntry.query
-    oq = StockOutput.query.filter_by(company_id=cid) if cid else StockOutput.query
+    pq = Product.query.filter_by(company_id=cid)
+    eq = StockEntry.query.filter_by(company_id=cid)
+    oq = StockOutput.query.filter_by(company_id=cid)
 
     total_products = pq.count()
     total_units = float(db.session.query(func.coalesce(func.sum(Product.stock_quantity), 0))
-                        .filter(Product.company_id == cid if cid else True).scalar() or 0)
+                        .filter(Product.company_id == cid).scalar() or 0)
     inventory_value = float(db.session.query(
         func.coalesce(func.sum(Product.stock_quantity * Product.cost_price), 0)
-    ).filter(Product.company_id == cid if cid else True).scalar() or 0)
+    ).filter(Product.company_id == cid).scalar() or 0)
 
     low_stock = pq.filter(Product.stock_quantity <= Product.min_stock,
                           Product.stock_quantity > 0).count()
     out_stock = pq.filter(Product.stock_quantity <= 0).count()
 
-    suppliers_count = (Supplier.query.filter_by(company_id=cid, active=True).count()
-                       if cid else Supplier.query.count())
-    employees_count = (Employee.query.filter_by(company_id=cid, status="active").count()
-                       if cid else Employee.query.count())
+    suppliers_count = Supplier.query.filter_by(company_id=cid, active=True).count()
+    employees_count = Employee.query.filter_by(company_id=cid, status="active").count()
 
     today = datetime.utcnow().date()
     start_today = datetime.combine(today, datetime.min.time())
@@ -101,18 +99,18 @@ def dashboard():
         d0 = datetime.combine(day, datetime.min.time())
         d1 = d0 + timedelta(days=1)
         ent = float(db.session.query(func.coalesce(func.sum(StockEntry.quantity), 0))
-                    .filter(StockEntry.entry_date >= d0, StockEntry.entry_date < d1,
-                            StockEntry.company_id == cid if cid else True).scalar() or 0)
+                    .filter(StockEntry.company_id == cid,
+                            StockEntry.entry_date >= d0, StockEntry.entry_date < d1).scalar() or 0)
         out = float(db.session.query(func.coalesce(func.sum(StockOutput.quantity), 0))
-                    .filter(StockOutput.output_date >= d0, StockOutput.output_date < d1,
-                            StockOutput.company_id == cid if cid else True).scalar() or 0)
+                    .filter(StockOutput.company_id == cid,
+                            StockOutput.output_date >= d0, StockOutput.output_date < d1).scalar() or 0)
         chart_days.append({"date": day.isoformat(), "entries": ent, "outputs": out})
 
     # Top moved products (last 30d)
     since = datetime.utcnow() - timedelta(days=30)
     top_out = (db.session.query(Product, func.sum(StockOutput.quantity).label("qty"))
                .join(StockOutput, StockOutput.product_id == Product.id)
-               .filter(StockOutput.output_date >= since)
+               .filter(Product.company_id == cid, StockOutput.output_date >= since)
                .group_by(Product.id).order_by(desc("qty")).limit(6).all())
     top_products = [{
         "id": p.id, "sku": p.sku, "name": p.name,
@@ -120,14 +118,13 @@ def dashboard():
     } for p, q in top_out]
 
     # Recent activity
-    recent = (ActivityLog.query.filter_by(company_id=cid).order_by(ActivityLog.created_at.desc())
-              .limit(8).all() if cid else
-              ActivityLog.query.order_by(ActivityLog.created_at.desc()).limit(8).all())
+    recent = (ActivityLog.query.filter_by(company_id=cid)
+              .order_by(ActivityLog.created_at.desc()).limit(8).all())
 
     # Category distribution
     cat_rows = (db.session.query(Category.name, func.count(Product.id))
                 .join(Product, Product.category_id == Category.id, isouter=True)
-                .filter(Category.company_id == cid if cid else True)
+                .filter(Category.company_id == cid)
                 .group_by(Category.id).all())
     categories_chart = [{"name": n, "count": int(c or 0)} for n, c in cat_rows]
 
@@ -156,10 +153,8 @@ def dashboard():
 @bp.get("/products")
 @require_permission("products.view", api=True)
 def products_list():
-    q = Product.query
     cid = _company_id()
-    if cid:
-        q = q.filter(Product.company_id == cid)
+    q = Product.query.filter_by(company_id=cid)
 
     search = (request.args.get("search") or "").strip()
     if search:
@@ -290,9 +285,7 @@ def products_delete(pid):
 @require_permission("categories.view", api=True)
 def categories_list():
     cid = _company_id()
-    q = Category.query
-    if cid:
-        q = q.filter(Category.company_id == cid)
+    q = Category.query.filter_by(company_id=cid)
     search = (request.args.get("search") or "").strip()
     if search:
         q = q.filter(Category.name.ilike(f"%{search}%"))
@@ -356,9 +349,7 @@ def categories_delete(cid):
 @require_permission("suppliers.view", api=True)
 def suppliers_list():
     cid = _company_id()
-    q = Supplier.query
-    if cid:
-        q = q.filter(Supplier.company_id == cid)
+    q = Supplier.query.filter_by(company_id=cid)
     search = (request.args.get("search") or "").strip()
     if search:
         like = f"%{search}%"
@@ -427,9 +418,7 @@ def suppliers_delete(sid):
 @require_permission("employees.view", api=True)
 def employees_list():
     cid = _company_id()
-    q = Employee.query
-    if cid:
-        q = q.filter(Employee.company_id == cid)
+    q = Employee.query.filter_by(company_id=cid)
     search = (request.args.get("search") or "").strip()
     if search:
         like = f"%{search}%"
@@ -511,9 +500,7 @@ def employees_delete(eid):
 @require_permission("stock.view", api=True)
 def entries_list():
     cid = _company_id()
-    q = StockEntry.query
-    if cid:
-        q = q.filter(StockEntry.company_id == cid)
+    q = StockEntry.query.filter_by(company_id=cid)
     pid = request.args.get("product_id", type=int)
     if pid:
         q = q.filter(StockEntry.product_id == pid)
@@ -627,9 +614,7 @@ def entries_delete(eid):
 @require_permission("stock.view", api=True)
 def outputs_list():
     cid = _company_id()
-    q = StockOutput.query
-    if cid:
-        q = q.filter(StockOutput.company_id == cid)
+    q = StockOutput.query.filter_by(company_id=cid)
     pid = request.args.get("product_id", type=int)
     if pid:
         q = q.filter(StockOutput.product_id == pid)
@@ -763,9 +748,7 @@ def outputs_delete(oid):
 @require_permission("stock.view", api=True)
 def stock_snapshot():
     cid = _company_id()
-    q = Product.query
-    if cid:
-        q = q.filter(Product.company_id == cid)
+    q = Product.query.filter_by(company_id=cid)
     status = request.args.get("stock_status")
     if status == "low":
         q = q.filter(Product.stock_quantity <= Product.min_stock,
@@ -789,9 +772,7 @@ def stock_snapshot():
 # ---------------------------------------------------------------------------
 def _gather_stock_rows():
     cid = _company_id()
-    q = Product.query
-    if cid:
-        q = q.filter(Product.company_id == cid)
+    q = Product.query.filter_by(company_id=cid)
     return q.order_by(Product.name.asc()).all()
 
 
@@ -800,14 +781,10 @@ def _gather_movements(kind: str = "all", days: int = 30):
     since = datetime.utcnow() - timedelta(days=days)
     entries = outputs = []
     if kind in ("all", "entries"):
-        eq = StockEntry.query
-        if cid:
-            eq = eq.filter(StockEntry.company_id == cid)
+        eq = StockEntry.query.filter_by(company_id=cid)
         entries = eq.filter(StockEntry.entry_date >= since).all()
     if kind in ("all", "outputs"):
-        oq = StockOutput.query
-        if cid:
-            oq = oq.filter(StockOutput.company_id == cid)
+        oq = StockOutput.query.filter_by(company_id=cid)
         outputs = oq.filter(StockOutput.output_date >= since).all()
     return entries, outputs
 
@@ -999,12 +976,9 @@ def export_stock_pdf():
 @login_required
 def notifications_list():
     cid = _company_id()
-    q = Notification.query
-    if cid:
-        q = q.filter(or_(Notification.user_id == current_user.id,
-                         Notification.user_id.is_(None)))
-        q = q.filter(or_(Notification.company_id == cid,
-                         Notification.company_id.is_(None)))
+    q = Notification.query.filter_by(company_id=cid)
+    q = q.filter(or_(Notification.user_id == current_user.id,
+                     Notification.user_id.is_(None)))
     q = q.order_by(Notification.created_at.desc()).limit(50)
     items = [n.to_dict() for n in q.all()]
     unread = sum(1 for n in items if not n["read"])
@@ -1025,10 +999,7 @@ def notifications_read(nid):
 @login_required
 def notifications_read_all():
     cid = _company_id()
-    q = Notification.query.filter(Notification.read_at.is_(None))
-    if cid:
-        q = q.filter(or_(Notification.company_id == cid,
-                         Notification.company_id.is_(None)))
+    q = Notification.query.filter_by(company_id=cid).filter(Notification.read_at.is_(None))
     for n in q.all():
         n.read_at = datetime.utcnow()
     db.session.commit()
@@ -1042,9 +1013,7 @@ def notifications_read_all():
 @login_required
 def activities_list():
     cid = _company_id()
-    q = ActivityLog.query
-    if cid:
-        q = q.filter(ActivityLog.company_id == cid)
+    q = ActivityLog.query.filter_by(company_id=cid)
     action = request.args.get("action")
     if action:
         q = q.filter(ActivityLog.action == action)
@@ -1064,7 +1033,7 @@ def activities_list():
 @login_required
 def company_get():
     cid = _company_id()
-    c = Company.query.get(cid) if cid else Company.query.first()
+    c = Company.query.get(cid)
     return _ok(c.to_dict() if c else {})
 
 
@@ -1072,7 +1041,7 @@ def company_get():
 @require_permission("settings.manage", api=True)
 def company_update():
     cid = _company_id()
-    c = Company.query.get(cid) if cid else Company.query.first()
+    c = Company.query.get(cid)
     if not c:
         return _err("Empresa não encontrada.", 404)
     data = request.get_json(silent=True) or {}
@@ -1100,7 +1069,8 @@ def permissions_list():
 @bp.get("/users")
 @require_permission("users.manage", api=True)
 def users_list():
-    q = User.query.order_by(User.name.asc())
+    cid = _company_id()
+    q = User.query.filter_by(company_id=cid).order_by(User.name.asc())
     search = (request.args.get("search") or "").strip()
     if search:
         like = f"%{search}%"
@@ -1174,9 +1144,7 @@ def users_delete(uid):
 @login_required
 def locations_list():
     cid = _company_id()
-    q = StockLocation.query
-    if cid:
-        q = q.filter(StockLocation.company_id == cid)
+    q = StockLocation.query.filter_by(company_id=cid)
     return _ok({"items": [l.to_dict() for l in q.order_by(StockLocation.name).all()]})
 
 
@@ -1202,13 +1170,13 @@ def locations_create():
 @login_required
 def legacy_resumo():
     cid = _company_id()
-    total_products = Product.query.filter_by(company_id=cid).count() if cid else Product.query.count()
+    total_products = Product.query.filter_by(company_id=cid).count()
     total_units = float(db.session.query(func.coalesce(func.sum(Product.stock_quantity), 0))
-                        .filter(Product.company_id == cid if cid else True).scalar() or 0)
-    entries = StockEntry.query.filter_by(company_id=cid).count() if cid else StockEntry.query.count()
-    outputs = StockOutput.query.filter_by(company_id=cid).count() if cid else StockOutput.query.count()
-    low = Product.query.filter(Product.stock_quantity <= Product.min_stock).count()
-    emps = Employee.query.filter_by(status="active").count()
+                        .filter(Product.company_id == cid).scalar() or 0)
+    entries = StockEntry.query.filter_by(company_id=cid).count()
+    outputs = StockOutput.query.filter_by(company_id=cid).count()
+    low = Product.query.filter_by(company_id=cid).filter(Product.stock_quantity <= Product.min_stock).count()
+    emps = Employee.query.filter_by(company_id=cid, status="active").count()
     return _ok({
         "total_produtos": total_products,
         "total_itens": int(total_units),
