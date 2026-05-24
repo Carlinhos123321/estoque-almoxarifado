@@ -8,7 +8,7 @@ All entities required by the ERP:
 - ActivityLog, Notification
 
 Designed with: relationships, indexes, timestamps, status fields, audit fields,
-soft-delete-friendly (active flags), and ready for PostgreSQL or SQLite.
+soft-delete-friendly (active flags), and ready for PostgreSQL.
 """
 from __future__ import annotations
 
@@ -167,6 +167,29 @@ class User(db.Model, UserMixin, TimestampMixin):
             "last_login_at": self.last_login_at.isoformat() if self.last_login_at else None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
+
+
+class PasswordResetToken(db.Model, TimestampMixin):
+    __tablename__ = "password_reset_tokens"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    token_hash = Column(String(255), nullable=False, unique=True, index=True)
+    expires_at = Column(DateTime, nullable=False, index=True)
+    used_at = Column(DateTime)
+    requested_ip = Column(String(60))
+
+    user = relationship("User")
+
+    def set_token(self, raw: str) -> None:
+        self.token_hash = generate_password_hash(raw)
+
+    def check_token(self, raw: str) -> bool:
+        return check_password_hash(self.token_hash, raw)
+
+    @property
+    def is_active(self) -> bool:
+        return not self.used_at and self.expires_at > datetime.utcnow()
 
 
 @login_manager.user_loader
@@ -391,7 +414,48 @@ class StockOutput(db.Model, TimestampMixin, AuditMixin):
 
 
 # ---------------------------------------------------------------------------
-# Employee + Enrollment (matrícula)
+# Unified stock ledger
+# ---------------------------------------------------------------------------
+class StockMovement(db.Model, TimestampMixin, AuditMixin):
+    """Unified stock ledger for reports, audits and future SaaS analytics."""
+    __tablename__ = "stock_movements"
+
+    id = Column(Integer, primary_key=True)
+    company_id = Column(Integer, ForeignKey("companies.id"), index=True)
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=False, index=True)
+    entry_id = Column(Integer, ForeignKey("stock_entries.id"), index=True)
+    output_id = Column(Integer, ForeignKey("stock_outputs.id"), index=True)
+
+    movement_type = Column(String(20), nullable=False, index=True)
+    document = Column(String(60))
+    quantity = Column(Numeric(14, 3), nullable=False)
+    unit_value = Column(Numeric(14, 2), default=0)
+    total_value = Column(Numeric(14, 2), default=0)
+    balance_after = Column(Numeric(14, 3), default=0)
+    reason = Column(String(120))
+    movement_date = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+    product = relationship("Product")
+    entry = relationship("StockEntry")
+    output = relationship("StockOutput")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "movement_type": self.movement_type,
+            "document": self.document,
+            "quantity": float(self.quantity or 0),
+            "unit_value": float(self.unit_value or 0),
+            "total_value": float(self.total_value or 0),
+            "balance_after": float(self.balance_after or 0),
+            "reason": self.reason,
+            "movement_date": self.movement_date.isoformat() if self.movement_date else None,
+            "product": {"id": self.product.id, "sku": self.product.sku, "name": self.product.name} if self.product else None,
+        }
+
+
+# ---------------------------------------------------------------------------
+# Employee + Enrollment
 # ---------------------------------------------------------------------------
 class Employee(db.Model, TimestampMixin, AuditMixin):
     __tablename__ = "employees"

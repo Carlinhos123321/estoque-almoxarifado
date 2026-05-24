@@ -19,7 +19,7 @@ const App = {
 };
 
 const Pages = {
-  dashboard: "Dashboard",
+  dashboard: "Painel",
   entradas: "Entradas",
   saidas: "Saídas",
   estoque: "Estoque",
@@ -442,7 +442,10 @@ function renderLineChart(canvasId, labels, entries, outputs) {
           data: entries,
           borderColor: "#15803d",
           backgroundColor: "rgba(21,128,61,0.08)",
-          tension: 0.35,
+          tension: 0.42,
+          pointRadius: 2,
+          pointHoverRadius: 5,
+          borderWidth: 2,
           fill: true,
         },
         {
@@ -450,7 +453,10 @@ function renderLineChart(canvasId, labels, entries, outputs) {
           data: outputs,
           borderColor: "#dc2626",
           backgroundColor: "rgba(220,38,38,0.08)",
-          tension: 0.35,
+          tension: 0.42,
+          pointRadius: 2,
+          pointHoverRadius: 5,
+          borderWidth: 2,
           fill: true,
         },
       ],
@@ -458,8 +464,14 @@ function renderLineChart(canvasId, labels, entries, outputs) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { position: "bottom" } },
-      scales: { y: { beginAtZero: true } },
+      interaction: { intersect: false, mode: "index" },
+      plugins: {
+        legend: { position: "bottom", labels: { boxWidth: 10, boxHeight: 10, usePointStyle: true } },
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: "#6b7280" } },
+        y: { beginAtZero: true, grid: { color: "rgba(148,163,184,0.18)" }, ticks: { color: "#6b7280" } },
+      },
     },
   });
 }
@@ -476,14 +488,18 @@ function renderBarChart(canvasId, labels, data) {
         label: "Produtos",
         data,
         backgroundColor: "#1d4ed8",
-        borderRadius: 4,
+        borderRadius: 6,
+        borderSkipped: false,
       }],
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       plugins: { legend: { display: false } },
-      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: "#6b7280" } },
+        y: { beginAtZero: true, grid: { color: "rgba(148,163,184,0.18)" }, ticks: { precision: 0, color: "#6b7280" } },
+      },
     },
   });
 }
@@ -2108,6 +2124,53 @@ function notificationItems(items) {
   `).join("");
 }
 
+function openForgotPasswordModal() {
+  const email = $("#login-email")?.value?.trim() || "";
+  openModal({
+    title: "Recuperar senha",
+    body: `
+      <form id="forgot-form" class="form-grid one">
+        <div class="field full">
+          <label>E-mail corporativo</label>
+          <input type="email" name="email" value="${escapeHtml(email)}" required placeholder="usuario@empresa.com"/>
+        </div>
+        <div class="form-message full" id="forgot-feedback" role="status"></div>
+      </form>
+    `,
+    footer: `
+      <button class="btn ghost" type="button" data-modal-close>Cancelar</button>
+      <button class="btn primary" type="submit" form="forgot-form" id="forgot-submit">
+        <i class="fa-solid fa-paper-plane"></i> Enviar instruções
+      </button>
+    `,
+  });
+
+  $("#forgot-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const button = $("#forgot-submit");
+    const feedback = $("#forgot-feedback");
+    feedback.className = "form-message full";
+    feedback.textContent = "";
+    button.disabled = true;
+    button.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Enviando`;
+    try {
+      const data = await api("/api/auth/forgot-password", {
+        method: "POST",
+        body: getFormData(event.currentTarget),
+      });
+      feedback.classList.add("success");
+      feedback.textContent = data.message || "Solicitação registrada com sucesso.";
+      toast("Solicitação enviada", "Verifique as instruções de recuperação.");
+    } catch (error) {
+      feedback.classList.add("error");
+      feedback.textContent = error.message;
+    } finally {
+      button.disabled = false;
+      button.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Enviar instruções`;
+    }
+  });
+}
+
 function openChangePasswordModal() {
   openModal({
     title: "Trocar senha",
@@ -2169,6 +2232,8 @@ function bindShellEvents() {
       button.disabled = false;
     }
   });
+
+  $("#forgot-password")?.addEventListener("click", openForgotPasswordModal);
 
   $all(".menu-item").forEach((item) => {
     item.addEventListener("click", () => {

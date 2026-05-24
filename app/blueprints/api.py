@@ -31,7 +31,7 @@ from ..extensions import db
 from ..helpers import log_activity, paginate_query, require_permission
 from ..models import (
     ActivityLog, Category, Company, Employee, Notification, Permission,
-    Product, Role, StockEntry, StockLocation, StockOutput, Supplier, User,
+    Product, Role, StockEntry, StockLocation, StockMovement, StockOutput, Supplier, User,
 )
 
 bp = Blueprint("api", __name__)
@@ -568,6 +568,21 @@ def entries_create():
     )
     product.stock_quantity = (product.stock_quantity or 0) + qty
     db.session.add(entry)
+    db.session.flush()
+    db.session.add(StockMovement(
+        company_id=_company_id(),
+        product_id=product.id,
+        entry_id=entry.id,
+        movement_type="entry",
+        document=entry.document,
+        quantity=qty,
+        unit_value=unit_cost,
+        total_value=qty * unit_cost,
+        balance_after=product.stock_quantity,
+        reason="Entrada de estoque",
+        movement_date=entry.entry_date,
+        created_by_id=current_user.id,
+    ))
     db.session.commit()
     log_activity("entry", "stock_entry", entry.id,
                  f"+{qty} de {product.sku} ({product.name})")
@@ -585,6 +600,20 @@ def entries_delete(eid):
     if p:
         p.stock_quantity = max(Decimal("0"), (p.stock_quantity or 0) - (e.quantity or 0))
     e.status = "cancelled"
+    db.session.add(StockMovement(
+        company_id=e.company_id,
+        product_id=e.product_id,
+        entry_id=e.id,
+        movement_type="cancel",
+        document=e.document,
+        quantity=-(e.quantity or 0),
+        unit_value=e.unit_cost,
+        total_value=-(e.total_cost or 0),
+        balance_after=p.stock_quantity if p else 0,
+        reason="Cancelamento de entrada",
+        movement_date=datetime.utcnow(),
+        created_by_id=current_user.id,
+    ))
     db.session.commit()
     log_activity("delete", "stock_entry", e.id,
                  f"Entrada cancelada (-{e.quantity} de {p.sku if p else '?'})")
@@ -663,6 +692,21 @@ def outputs_create():
     )
     product.stock_quantity = (product.stock_quantity or 0) - qty
     db.session.add(out)
+    db.session.flush()
+    db.session.add(StockMovement(
+        company_id=_company_id(),
+        product_id=product.id,
+        output_id=out.id,
+        movement_type="output",
+        document=out.document,
+        quantity=-qty,
+        unit_value=unit_price,
+        total_value=qty * unit_price,
+        balance_after=product.stock_quantity,
+        reason=out.reason,
+        movement_date=out.output_date,
+        created_by_id=current_user.id,
+    ))
     db.session.commit()
 
     # Low-stock notification
@@ -692,6 +736,20 @@ def outputs_delete(oid):
     if p:
         p.stock_quantity = (p.stock_quantity or 0) + (o.quantity or 0)
     o.status = "cancelled"
+    db.session.add(StockMovement(
+        company_id=o.company_id,
+        product_id=o.product_id,
+        output_id=o.id,
+        movement_type="cancel",
+        document=o.document,
+        quantity=o.quantity or 0,
+        unit_value=o.unit_price,
+        total_value=o.total_price or 0,
+        balance_after=p.stock_quantity if p else 0,
+        reason="Cancelamento de saída",
+        movement_date=datetime.utcnow(),
+        created_by_id=current_user.id,
+    ))
     db.session.commit()
     log_activity("delete", "stock_output", o.id,
                  f"Saída cancelada (+{o.quantity} de {p.sku if p else '?'})")

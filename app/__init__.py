@@ -54,7 +54,7 @@ def create_app(config_class: type = Config) -> Flask:
     def inject_globals():
         return {
             "APP_NAME": "MovStok",
-            "APP_TAGLINE": "ERP & Warehouse Management",
+            "APP_TAGLINE": "ERP & Gestão de Almoxarifado",
         }
 
     return app

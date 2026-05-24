@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>MovStok ERP — Warehouse Management</title>
+<title>MovStok ERP - Gestão de Almoxarifado</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -20,7 +20,7 @@
         <div class="brand-logo">MV</div>
         <div>
           <h1>MovStok</h1>
-          <span>ERP &amp; Warehouse Management</span>
+          <span>ERP &amp; Gestão de Almoxarifado</span>
         </div>
       </header>
 
@@ -40,6 +40,9 @@
             <label>Senha</label>
             <input type="password" id="login-password" required placeholder="••••••••"/>
           </div>
+          <button type="button" class="forgot-btn" id="forgot-password">
+            Esqueci minha senha
+          </button>
           <label class="checkbox-inline">
             <input type="checkbox" id="login-remember"/> Manter conectado
           </label>
@@ -49,9 +52,6 @@
           </button>
         </form>
 
-        <div class="auth-hint">
-          <strong>Demo:</strong> admin@movstok.com / admin123
-        </div>
       </div>
 
       <footer class="auth-footer">
@@ -95,7 +95,7 @@
       <div class="menu-group">PRINCIPAL</div>
       <a class="menu-item" data-page="dashboard">
         <span class="menu-icon"><i class="fa-solid fa-gauge-high"></i></span>
-        <span class="menu-text">Dashboard</span>
+        <span class="menu-text">Painel</span>
       </a>
 
       <div class="menu-group">OPERAÇÕES</div>
@@ -167,9 +167,9 @@
       <div class="topbar-left">
         <button class="icon-btn" id="mobile-menu"><i class="fa-solid fa-bars"></i></button>
         <div class="breadcrumb">
-          <span class="bc-root">MovStok</span>
+          <span class="bc-root">Início</span>
           <i class="fa-solid fa-angle-right"></i>
-          <span class="bc-current" id="bc-current">Dashboard</span>
+          <span class="bc-current" id="bc-current">Painel</span>
         </div>
       </div>
 
