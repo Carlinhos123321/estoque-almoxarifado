@@ -1,22 +1,107 @@
 /* ==========================================================================
-   MovStok ERP - Frontend application
-   Keeps the existing static shell and connects it to the Flask REST API.
+   MovStok ERP - Corporate SaaS Architecture
+   Core: Application Controller, State & Service Registry
    ========================================================================== */
 
-const App = {
-  currentPage: "dashboard",
-  user: null,
-  permissions: new Set(),
-  charts: {},
-  cache: {
-    categories: [],
-    suppliers: [],
-    products: [],
-    employees: [],
-    roles: [],
-    locations: [],
+const MovStok = {
+  version: "2.0.0",
+  
+  state: {
+    isBooted: false,
+    currentPage: "dashboard",
+    user: null,
+    permissions: new Set(),
+    cache: {
+      categories: [],
+      suppliers: [],
+      products: [],
+      employees: [],
+      roles: [],
+      locations: [],
+    },
+    carouselInterval: null,
+    charts: {},
   },
-  carouselInterval: null,
+
+  // Camada de Serviços: Abstração de I/O
+  Services: {
+    async request(path, options = {}) {
+      const config = {
+        credentials: "same-origin",
+        headers: {
+          "Accept": "application/json",
+          "X-Requested-With": "XMLHttpRequest",
+          ...(options.body ? { "Content-Type": "application/json" } : {}),
+          ...(options.headers || {}),
+        },
+        ...options,
+      };
+
+      if (options.body && typeof options.body !== "string") {
+        config.body = JSON.stringify(options.body);
+      }
+
+      const response = await fetch(path, config);
+      const payload = await response.json().catch(() => ({ error: "Erro de comunicação com o servidor." }));
+
+      if (!response.ok) {
+        if (response.status === 401) MovStok.Auth.logout(true);
+        throw new Error(payload.error || "Operação falhou.");
+      }
+      return payload;
+    },
+
+    Products: {
+      list: (params) => MovStok.Services.request(`/api/products${buildQuery(params)}`),
+      save: (data, id = null) => MovStok.Services.request(id ? `/api/products/${id}` : "/api/products", {
+        method: id ? "PUT" : "POST",
+        body: data
+      }),
+    },
+    Stock: {
+      entry: (data) => MovStok.Services.request("/api/entries", { method: "POST", body: data }),
+      output: (data) => MovStok.Services.request("/api/outputs", { method: "POST", body: data }),
+    },
+    Auth: {
+      async check() {
+        const session = await MovStok.Services.request("/api/auth/me");
+        if (session.authenticated) {
+          MovStok.state.user = session.user;
+          MovStok.state.permissions = new Set(session.permissions || []);
+          return true;
+        }
+        return false;
+      },
+      logout: async () => {
+        await MovStok.Services.request("/api/auth/logout", { method: "POST" });
+        location.reload();
+      }
+    }
+  },
+
+  // Engine de UI: Componentização e Helpers visuais
+  UI: {
+    setLoading(title = "Processando") {
+      $("#page-wrap").innerHTML = `
+        <div class="panel">
+          <div class="panel-body text-center" style="padding: 60px 20px">
+            <i class="fa-solid fa-circle-notch fa-spin fa-2x text-primary" style="margin-bottom:15px"></i>
+            <p class="text-muted">${escapeHtml(title)}...</p>
+          </div>
+        </div>`;
+    },
+    
+    toast(title, message, type = "success") {
+      const root = $("#toast-root");
+      const node = document.createElement("div");
+      node.className = `toast ${type}`;
+      node.innerHTML = `
+        <i class="fa-solid ${type === 'danger' ? 'fa-circle-xmark' : 'fa-circle-check'}"></i>
+        <div><strong>${escapeHtml(title)}</strong>${message ? `<small>${escapeHtml(message)}</small>` : ""}</div>`;
+      root.appendChild(node);
+      setTimeout(() => node.remove(), 4000);
+    }
+  }
 };
 
 const Pages = {
@@ -112,7 +197,7 @@ function initials(name) {
 }
 
 function hasPermission(code) {
-  return App.permissions.has(code) || App.user?.role?.name === "admin";
+  return MovStok.state.permissions.has(code) || MovStok.state.user?.role?.name === "admin";
 }
 
 function buildQuery(params = {}) {
@@ -127,10 +212,12 @@ function buildQuery(params = {}) {
 }
 
 async function api(path, options = {}) {
+  // Centralização de segurança e headers ERP
   const config = {
     credentials: "same-origin",
     headers: {
       Accept: "application/json",
+      "X-Requested-With": "XMLHttpRequest",
       ...(options.body ? { "Content-Type": "application/json" } : {}),
       ...(options.headers || {}),
     },
@@ -404,32 +491,32 @@ async function confirmAction(title, message, actionLabel, action) {
 async function loadLookupData(types = ["categories", "suppliers", "products", "employees", "locations"]) {
   const tasks = [];
   if (types.includes("categories")) {
-    tasks.push(api("/api/categories").then((data) => { App.cache.categories = data.items || []; }));
+    tasks.push(api("/api/categories").then((data) => { MovStok.state.cache.categories = data.items || []; }));
   }
   if (types.includes("suppliers")) {
-    tasks.push(api("/api/suppliers?paginated=0").then((data) => { App.cache.suppliers = data.items || []; }));
+    tasks.push(api("/api/suppliers?paginated=0").then((data) => { MovStok.state.cache.suppliers = data.items || []; }));
   }
   if (types.includes("products")) {
-    tasks.push(api("/api/products?per_page=200").then((data) => { App.cache.products = data.items || []; }));
+    tasks.push(api("/api/products?per_page=200").then((data) => { MovStok.state.cache.products = data.items || []; }));
   }
   if (types.includes("employees")) {
-    tasks.push(api("/api/employees?paginated=0").then((data) => { App.cache.employees = data.items || []; }));
+    tasks.push(api("/api/employees?paginated=0").then((data) => { MovStok.state.cache.employees = data.items || []; }));
   }
   if (types.includes("roles")) {
-    tasks.push(api("/api/roles").then((data) => { App.cache.roles = data.items || []; }));
+    tasks.push(api("/api/roles").then((data) => { MovStok.state.cache.roles = data.items || []; }));
   }
   if (types.includes("locations")) {
-    tasks.push(api("/api/locations").then((data) => { App.cache.locations = data.items || []; }));
+    tasks.push(api("/api/locations").then((data) => { MovStok.state.cache.locations = data.items || []; }));
   }
   await Promise.all(tasks);
 }
 
 function destroyCharts() {
-  Object.values(App.charts).forEach((chart) => chart?.destroy?.());
-  App.charts = {};
-  if (App.carouselInterval) {
-    clearInterval(App.carouselInterval);
-    App.carouselInterval = null;
+  Object.values(MovStok.state.charts).forEach((chart) => chart?.destroy?.());
+  MovStok.state.charts = {};
+  if (MovStok.state.carouselInterval) {
+    clearInterval(MovStok.state.carouselInterval);
+    MovStok.state.carouselInterval = null;
   }
 }
 
@@ -437,7 +524,7 @@ function renderLineChart(canvasId, labels, entries, outputs) {
   if (!window.Chart) return;
   const ctx = document.getElementById(canvasId);
   if (!ctx) return;
-  App.charts[canvasId] = new Chart(ctx, {
+  MovStok.state.charts[canvasId] = new Chart(ctx, {
     type: "line",
     data: {
       labels,
@@ -494,7 +581,7 @@ function renderBarChart(canvasId, labels, data) {
   if (!window.Chart) return;
   const ctx = document.getElementById(canvasId);
   if (!ctx) return;
-  App.charts[canvasId] = new Chart(ctx, {
+  MovStok.state.charts[canvasId] = new Chart(ctx, {
     type: "bar",
     data: {
       labels,
@@ -531,8 +618,8 @@ function renderBarChart(canvasId, labels, data) {
 function showAuth() {
   $("#auth").style.display = "block";
   $("#app-shell").classList.remove("show");
-  App.user = null;
-  App.permissions = new Set();
+  MovStok.state.user = null;
+  MovStok.state.permissions = new Set();
   if (location.pathname !== "/login") {
     history.replaceState({}, "", "/login");
   }
@@ -544,9 +631,9 @@ function showApp() {
 }
 
 function updateUserBox() {
-  $("#user-name").textContent = App.user?.name || "Usuário";
-  $("#user-role").textContent = roleLabel(App.user?.role);
-  $("#user-avatar").textContent = initials(App.user?.name);
+  $("#user-name").textContent = MovStok.state.user?.name || "Usuário";
+  $("#user-role").textContent = roleLabel(MovStok.state.user?.role);
+  $("#user-avatar").textContent = initials(MovStok.state.user?.name);
 }
 
 async function checkSession() {
@@ -555,8 +642,8 @@ async function checkSession() {
     showAuth();
     return false;
   }
-  App.user = session.user;
-  App.permissions = new Set(session.permissions || []);
+  MovStok.state.user = session.user;
+  MovStok.state.permissions = new Set(session.permissions || []);
   updateUserBox();
   showApp();
   return true;
@@ -570,7 +657,7 @@ function pageFromPath() {
 }
 
 function updateNavigation(page) {
-  App.currentPage = page;
+  MovStok.state.currentPage = page;
   $("#bc-current").textContent = Pages[page] || page;
   $all(".menu-item").forEach((item) => {
     item.classList.toggle("active", item.dataset.page === page);
@@ -786,13 +873,13 @@ function initDashboardCarousel() {
     dot.addEventListener("click", () => {
       show(Number(dot.dataset.index));
       // Reset timer on manual click
-      clearInterval(App.carouselInterval);
+      clearInterval(MovStok.state.carouselInterval);
       startTimer();
     });
   });
 
   const startTimer = () => {
-    App.carouselInterval = setInterval(() => {
+    MovStok.state.carouselInterval = setInterval(() => {
       show((current + 1) % items.length);
     }, 5000);
   };
@@ -903,7 +990,7 @@ async function renderProducts(params = {}) {
         filters: `
           <select id="products-category">
             <option value="">Todas as categorias</option>
-            ${optionList(App.cache.categories, params.category_id)}
+            ${optionList(MovStok.state.cache.categories, params.category_id)}
           </select>
           <select id="products-stock">
             <option value="">Todos os estoques</option>
@@ -998,21 +1085,21 @@ function productForm(product = {}) {
         <label>Categoria</label>
         <select name="category_id">
           <option value="">Sem categoria</option>
-          ${optionList(App.cache.categories, product.category?.id)}
+          ${optionList(MovStok.state.cache.categories, product.category?.id)}
         </select>
       </div>
       <div class="field">
         <label>Fornecedor</label>
         <select name="supplier_id">
           <option value="">Sem fornecedor</option>
-          ${optionList(App.cache.suppliers, product.supplier?.id)}
+          ${optionList(MovStok.state.cache.suppliers, product.supplier?.id)}
         </select>
       </div>
       <div class="field">
         <label>Local de estoque</label>
         <select name="location_id">
           <option value="">Sem local</option>
-          ${optionList(App.cache.locations, product.location?.id)}
+          ${optionList(MovStok.state.cache.locations, product.location?.id)}
         </select>
       </div>
       <div class="field">

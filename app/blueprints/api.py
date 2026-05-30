@@ -20,9 +20,7 @@ Exposes /api/* endpoints for every ERP module:
 from __future__ import annotations
 
 import io
-from datetime import datetime, timedelta
 from decimal import Decimal
-
 from flask import Blueprint, abort, jsonify, request, send_file
 from flask_login import current_user, login_required
 from sqlalchemy import desc, func, or_
@@ -33,6 +31,10 @@ from ..models import (
     ActivityLog, Category, Company, Employee, Notification, Permission,
     Product, Role, StockEntry, StockLocation, StockMovement, StockOutput, Supplier, User,
 )
+from ..services.dashboard_service import DashboardService
+from ..services.product_service import ProductService
+from ..services.stock_service import StockService
+from ..services.audit_service import AuditService
 
 bp = Blueprint("api", __name__)
 
@@ -67,91 +69,10 @@ def _to_decimal(v, default="0"):
 @bp.get("/dashboard")
 @require_permission("dashboard.view", api=True)
 def dashboard():
-    cid = _company_id()
-    pq = Product.query.filter_by(company_id=cid)
-    eq = StockEntry.query.filter_by(company_id=cid)
-    oq = StockOutput.query.filter_by(company_id=cid)
-
-    total_products = pq.count()
-    total_units = float(db.session.query(func.coalesce(func.sum(Product.stock_quantity), 0))
-                        .filter(Product.company_id == cid).scalar() or 0)
-    inventory_value = float(db.session.query(
-        func.coalesce(func.sum(Product.stock_quantity * Product.cost_price), 0)
-    ).filter(Product.company_id == cid).scalar() or 0)
-
-    low_stock = pq.filter(Product.stock_quantity <= Product.min_stock,
-                          Product.stock_quantity > 0).count()
-    out_stock = pq.filter(Product.stock_quantity <= 0).count()
-
-    suppliers_count = Supplier.query.filter_by(company_id=cid, active=True).count()
-    employees_count = Employee.query.filter_by(company_id=cid, status="active").count()
-
-    today = datetime.utcnow().date()
-    start_today = datetime.combine(today, datetime.min.time())
-    entries_today = eq.filter(StockEntry.entry_date >= start_today).count()
-    outputs_today = oq.filter(StockOutput.output_date >= start_today).count()
-
-    # 14-day chart
-    start = datetime.utcnow() - timedelta(days=13)
-    chart_days = []
-    for i in range(14):
-        day = (start + timedelta(days=i)).date()
-        d0 = datetime.combine(day, datetime.min.time())
-        d1 = d0 + timedelta(days=1)
-        ent = float(db.session.query(func.coalesce(func.sum(StockEntry.quantity), 0))
-                    .filter(StockEntry.company_id == cid,
-                            StockEntry.entry_date >= d0, StockEntry.entry_date < d1).scalar() or 0)
-        out = float(db.session.query(func.coalesce(func.sum(StockOutput.quantity), 0))
-                    .filter(StockOutput.company_id == cid,
-                            StockOutput.output_date >= d0, StockOutput.output_date < d1).scalar() or 0)
-        chart_days.append({"date": day.isoformat(), "entries": ent, "outputs": out})
-
-    # Top moved products (last 30d)
-    since = datetime.utcnow() - timedelta(days=30)
-    top_out = (db.session.query(Product, func.sum(StockOutput.quantity).label("qty"))
-               .join(StockOutput, StockOutput.product_id == Product.id)
-               .filter(Product.company_id == cid, StockOutput.output_date >= since)
-               .group_by(Product.id).order_by(desc("qty")).limit(6).all())
-    top_products = [{
-        "id": p.id, "sku": p.sku, "name": p.name,
-        "quantity": float(q or 0), "stock": float(p.stock_quantity or 0),
-    } for p, q in top_out]
-
-    # Recent activity
-    recent = (ActivityLog.query.filter_by(company_id=cid)
-              .order_by(ActivityLog.created_at.desc()).limit(8).all())
-
-    # Category distribution
-    cat_rows = (db.session.query(Category.name, func.count(Product.id))
-                .join(Product, Product.category_id == Category.id, isouter=True)
-                .filter(Category.company_id == cid)
-                .group_by(Category.id).all())
-    categories_chart = [{"name": n, "count": int(c or 0)} for n, c in cat_rows]
-
-    # Dashboard Banners (Imagens fixas/locais para persistência no Railway)
-    banners = [
-        {"id": 1, "image": "img/banners/banner1.jpg", "title": "Gestão de Estoque", "desc": "Controle total de entradas e saídas."},
-        {"id": 2, "image": "img/banners/banner2.jpg", "title": "Relatórios em Tempo Real", "desc": "Analise seu inventário com um clique."},
-    ]
-
-    return _ok({
-        "kpi": {
-            "total_products": total_products,
-            "total_units": total_units,
-            "inventory_value": round(inventory_value, 2),
-            "low_stock": low_stock,
-            "out_stock": out_stock,
-            "suppliers": suppliers_count,
-            "employees": employees_count,
-            "entries_today": entries_today,
-            "outputs_today": outputs_today,
-        },
-        "chart_movements": chart_days,
-        "categories_chart": categories_chart,
-        "top_products": top_products,
-        "recent_activity": [a.to_dict() for a in recent],
-        "banners": banners
-    })
+    """Endpoint profissional: apenas orquestra a resposta da camada de serviço."""
+    service = DashboardService(company_id=_company_id())
+    data = service.get_summary_metrics()
+    return _ok(data)
 
 
 # ---------------------------------------------------------------------------
@@ -160,43 +81,15 @@ def dashboard():
 @bp.get("/products")
 @require_permission("products.view", api=True)
 def products_list():
-    cid = _company_id()
-    q = Product.query.filter_by(company_id=cid)
-
-    search = (request.args.get("search") or "").strip()
-    if search:
-        like = f"%{search}%"
-        q = q.filter(or_(Product.name.ilike(like), Product.sku.ilike(like),
-                         Product.barcode.ilike(like)))
-
-    category_id = request.args.get("category_id", type=int)
-    if category_id:
-        q = q.filter(Product.category_id == category_id)
-    supplier_id = request.args.get("supplier_id", type=int)
-    if supplier_id:
-        q = q.filter(Product.supplier_id == supplier_id)
-    status = request.args.get("status")
-    if status:
-        q = q.filter(Product.status == status)
-    stock_status = request.args.get("stock_status")
-    if stock_status == "out":
-        q = q.filter(Product.stock_quantity <= 0)
-    elif stock_status == "low":
-        q = q.filter(Product.stock_quantity <= Product.min_stock,
-                     Product.stock_quantity > 0)
-    elif stock_status == "ok":
-        q = q.filter(Product.stock_quantity > Product.min_stock)
-
-    sort = request.args.get("sort", "name")
-    direction = request.args.get("dir", "asc")
-    sort_col = {
-        "name": Product.name, "sku": Product.sku,
-        "stock": Product.stock_quantity, "created_at": Product.created_at,
-        "cost": Product.cost_price, "sale": Product.sale_price,
-    }.get(sort, Product.name)
-    q = q.order_by(desc(sort_col) if direction == "desc" else sort_col)
-
-    result = paginate_query(q, default_per_page=25)
+    service = ProductService(_company_id(), current_user.id)
+    filters = {
+        "search": request.args.get("search"),
+        "category_id": request.args.get("category_id", type=int),
+        "stock_status": request.args.get("stock_status"),
+        "sort": request.args.get("sort", "name"),
+        "dir": request.args.get("dir", "asc")
+    }
+    result = service.list_products(filters, page=request.args.get("page", 1, type=int))
     return _ok({
         "items": [p.to_dict() for p in result["items"]],
         "meta": result["meta"],
@@ -206,7 +99,7 @@ def products_list():
 @bp.get("/products/<int:pid>")
 @require_permission("products.view", api=True)
 def products_get(pid):
-    p = Product.query.get_or_404(pid)
+    p = Product.query.filter_by(company_id=_company_id(), id=pid).first_or_404()
     return _ok(p.to_dict())
 
 
@@ -249,7 +142,7 @@ def products_create():
 @bp.patch("/products/<int:pid>")
 @require_permission("products.edit", api=True)
 def products_update(pid):
-    p = Product.query.get_or_404(pid)
+    p = Product.query.filter_by(company_id=_company_id(), id=pid).first_or_404()
     data = request.get_json(silent=True) or {}
     for field in ("name", "description", "unit", "barcode", "image_url", "status"):
         if field in data:
@@ -270,14 +163,14 @@ def products_update(pid):
         p.stock_quantity = _to_decimal(data["stock_quantity"])
     p.updated_by_id = current_user.id
     db.session.commit()
-    log_activity("update", "product", p.id, f"Produto atualizado: {p.sku}")
+    AuditService.log("update", "product", p.id, f"Produto atualizado: {p.sku}", _company_id(), current_user.id)
     return _ok(p.to_dict())
 
 
 @bp.delete("/products/<int:pid>")
 @require_permission("products.delete", api=True)
 def products_delete(pid):
-    p = Product.query.get_or_404(pid)
+    p = Product.query.filter_by(company_id=_company_id(), id=pid).first_or_404()
     sku = p.sku
     p.status = "inactive"  # soft delete
     db.session.commit()
@@ -324,7 +217,7 @@ def categories_create():
 @bp.patch("/categories/<int:cid>")
 @require_permission("categories.manage", api=True)
 def categories_update(cid):
-    c = Category.query.get_or_404(cid)
+    c = Category.query.filter_by(company_id=_company_id(), id=cid).first_or_404()
     data = request.get_json(silent=True) or {}
     for f in ("name", "description", "color"):
         if f in data:
@@ -333,14 +226,14 @@ def categories_update(cid):
         c.active = bool(data["active"])
     c.updated_by_id = current_user.id
     db.session.commit()
-    log_activity("update", "category", c.id, f"Categoria: {c.name}")
+    AuditService.log("update", "category", c.id, f"Categoria: {c.name}", _company_id(), current_user.id)
     return _ok(c.to_dict())
 
 
 @bp.delete("/categories/<int:cid>")
 @require_permission("categories.manage", api=True)
 def categories_delete(cid):
-    c = Category.query.get_or_404(cid)
+    c = Category.query.filter_by(company_id=_company_id(), id=cid).first_or_404()
     if c.products:
         return _err("Categoria possui produtos vinculados.")
     db.session.delete(c)
@@ -394,7 +287,7 @@ def suppliers_create():
 @bp.patch("/suppliers/<int:sid>")
 @require_permission("suppliers.manage", api=True)
 def suppliers_update(sid):
-    s = Supplier.query.get_or_404(sid)
+    s = Supplier.query.filter_by(company_id=_company_id(), id=sid).first_or_404()
     data = request.get_json(silent=True) or {}
     for f in ("name", "cnpj", "email", "phone", "contact_person",
               "address", "city", "state", "notes"):
@@ -404,14 +297,14 @@ def suppliers_update(sid):
         s.active = bool(data["active"])
     s.updated_by_id = current_user.id
     db.session.commit()
-    log_activity("update", "supplier", s.id, f"Fornecedor: {s.name}")
+    AuditService.log("update", "supplier", s.id, f"Fornecedor: {s.name}", _company_id(), current_user.id)
     return _ok(s.to_dict())
 
 
 @bp.delete("/suppliers/<int:sid>")
 @require_permission("suppliers.manage", api=True)
 def suppliers_delete(sid):
-    s = Supplier.query.get_or_404(sid)
+    s = Supplier.query.filter_by(company_id=_company_id(), id=sid).first_or_404()
     s.active = False
     db.session.commit()
     log_activity("delete", "supplier", sid, f"Fornecedor desativado: {s.name}")
@@ -478,7 +371,7 @@ def employees_create():
 @bp.patch("/employees/<int:eid>")
 @require_permission("employees.manage", api=True)
 def employees_update(eid):
-    e = Employee.query.get_or_404(eid)
+    e = Employee.query.filter_by(company_id=_company_id(), id=eid).first_or_404()
     data = request.get_json(silent=True) or {}
     for f in ("name", "cpf", "email", "phone", "department",
               "position", "status", "notes"):
@@ -486,14 +379,14 @@ def employees_update(eid):
             setattr(e, f, data[f])
     e.updated_by_id = current_user.id
     db.session.commit()
-    log_activity("update", "employee", e.id, f"Funcionário: {e.name}")
+    AuditService.log("update", "employee", e.id, f"Funcionário: {e.name}", _company_id(), current_user.id)
     return _ok(e.to_dict())
 
 
 @bp.delete("/employees/<int:eid>")
 @require_permission("employees.manage", api=True)
 def employees_delete(eid):
-    e = Employee.query.get_or_404(eid)
+    e = Employee.query.filter_by(company_id=_company_id(), id=eid).first_or_404()
     e.status = "terminated"
     db.session.commit()
     log_activity("delete", "employee", eid, f"Funcionário desligado: {e.name}")
@@ -535,64 +428,22 @@ def entries_list():
 @bp.post("/entries")
 @require_permission("stock.entry", api=True)
 def entries_create():
-    data = request.get_json(silent=True) or {}
-    pid = data.get("product_id")
-    qty = _to_decimal(data.get("quantity"))
-    if not pid:
-        return _err("Produto é obrigatório.")
-    if qty <= 0:
-        return _err("Quantidade deve ser maior que zero.")
-    product = Product.query.get(pid)
-    if not product:
-        return _err("Produto não encontrado.", 404)
-
-    unit_cost = _to_decimal(data.get("unit_cost", product.cost_price))
-    entry = StockEntry(
-        company_id=_company_id(),
-        product_id=product.id,
-        supplier_id=data.get("supplier_id") or product.supplier_id,
-        document=data.get("document"),
-        quantity=qty,
-        unit_cost=unit_cost,
-        total_cost=qty * unit_cost,
-        notes=data.get("notes"),
-        entry_date=datetime.utcnow(),
-        status="confirmed",
-        created_by_id=current_user.id,
-    )
-    product.stock_quantity = (product.stock_quantity or 0) + qty
-    db.session.add(entry)
-    db.session.flush()
-    db.session.add(StockMovement(
-        company_id=_company_id(),
-        product_id=product.id,
-        entry_id=entry.id,
-        movement_type="entry",
-        document=entry.document,
-        quantity=qty,
-        unit_value=unit_cost,
-        total_value=qty * unit_cost,
-        balance_after=product.stock_quantity,
-        reason="Entrada de estoque",
-        movement_date=entry.entry_date,
-        created_by_id=current_user.id,
-    ))
-    db.session.commit()
-    log_activity("entry", "stock_entry", entry.id,
-                 f"+{qty} de {product.sku} ({product.name})")
-    return _ok(entry.to_dict(), 201)
+    try:
+        service = StockService(_company_id(), current_user.id)
+        entry = service.register_entry(request.get_json(silent=True) or {})
+        return _ok(entry.to_dict(), 201)
+    except ValueError as e:
+        return _err(str(e))
 
 
 @bp.delete("/entries/<int:eid>")
 @require_permission("stock.entry", api=True)
 def entries_delete(eid):
-    e = StockEntry.query.get_or_404(eid)
+    e = StockEntry.query.filter_by(company_id=_company_id(), id=eid).first_or_404()
     if e.status == "cancelled":
         return _err("Entrada já cancelada.")
-    # revert stock
-    p = e.product
-    if p:
-        p.stock_quantity = max(Decimal("0"), (p.stock_quantity or 0) - (e.quantity or 0))
+    p = e.product # p.company_id is verified via entry relationship
+    p.stock_quantity = max(Decimal("0"), p.stock_quantity - e.quantity)
     e.status = "cancelled"
     db.session.add(StockMovement(
         company_id=e.company_id,
@@ -609,8 +460,7 @@ def entries_delete(eid):
         created_by_id=current_user.id,
     ))
     db.session.commit()
-    log_activity("delete", "stock_entry", e.id,
-                 f"Entrada cancelada (-{e.quantity} de {p.sku if p else '?'})")
+    AuditService.log("delete", "stock_entry", e.id, f"Cancelamento entrada {e.document}", _company_id(), current_user.id)
     return _ok({"ok": True})
 
 
