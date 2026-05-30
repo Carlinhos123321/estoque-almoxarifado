@@ -1313,7 +1313,7 @@ function entriesTable(items) {
 }
 
 function movementProductOptions(selected) {
-  return App.cache.products.map((p) => `
+  return MovStok.state.cache.products.map((p) => `
     <option value="${p.id}" ${Number(selected) === Number(p.id) ? "selected" : ""}>
       ${escapeHtml(p.sku)} · ${escapeHtml(p.name)} (${fmtQty(p.stock_quantity)} ${escapeHtml(p.unit)})
     </option>
@@ -1337,7 +1337,7 @@ function openEntryModal(defaults = {}) {
           <label>Fornecedor</label>
           <select name="supplier_id">
             <option value="">Fornecedor do produto</option>
-            ${optionList(App.cache.suppliers)}
+            ${optionList(MovStok.state.cache.suppliers)}
           </select>
         </div>
         <div class="field">
@@ -1371,7 +1371,7 @@ function openEntryModal(defaults = {}) {
       await api("/api/entries", { method: "POST", body: getFormData(event.currentTarget) });
       closeModal();
       toast("Entrada registrada", "Saldo atualizado com sucesso.");
-      renderPage(App.currentPage);
+      renderPage(MovStok.state.currentPage);
     } catch (error) {
       toast("Erro ao registrar entrada", error.message, "danger");
     }
@@ -1457,7 +1457,7 @@ function openOutputModal(defaults = {}) {
           <label>Funcionário</label>
           <select name="employee_id">
             <option value="">Sem vínculo</option>
-            ${App.cache.employees.map((e) => `<option value="${e.id}">${escapeHtml(e.enrollment)} · ${escapeHtml(e.name)}</option>`).join("")}
+            ${MovStok.state.cache.employees.map((e) => `<option value="${e.id}">${escapeHtml(e.enrollment)} · ${escapeHtml(e.name)}</option>`).join("")}
           </select>
         </div>
         <div class="field">
@@ -1504,7 +1504,7 @@ function openOutputModal(defaults = {}) {
       await api("/api/outputs", { method: "POST", body: getFormData(event.currentTarget) });
       closeModal();
       toast("Saída registrada", "Saldo atualizado com sucesso.");
-      renderPage(App.currentPage);
+      renderPage(MovStok.state.currentPage);
     } catch (error) {
       toast("Erro ao registrar saída", error.message, "danger");
     }
@@ -2341,7 +2341,7 @@ function bindRowActions(actions) {
 }
 
 async function loadNotifications() {
-  if (!App.user) return;
+  if (!MovStok.state.user) return;
   try {
     const data = await api("/api/notifications");
     const count = $("#notif-count");
@@ -2541,7 +2541,7 @@ function bindShellEvents() {
           remember: $("#login-remember").checked,
         },
       });
-      App.user = data.user;
+      MovStok.state.user = data.user;
       await checkSession();
       navigate(pageFromPath(), true);
       toast("Bem-vindo", "Sessão iniciada com sucesso.");
@@ -2612,10 +2612,10 @@ function bindShellEvents() {
         body: `
           <table class="data-table">
             <tbody>
-              <tr><td>Nome</td><td><strong>${escapeHtml(App.user?.name)}</strong></td></tr>
-              <tr><td>E-mail</td><td>${escapeHtml(App.user?.email)}</td></tr>
-              <tr><td>Perfil</td><td>${escapeHtml(roleLabel(App.user?.role))}</td></tr>
-              <tr><td>Status</td><td>${userStatusBadge(App.user?.status)}</td></tr>
+              <tr><td>Nome</td><td><strong>${escapeHtml(MovStok.state.user?.name)}</strong></td></tr>
+              <tr><td>E-mail</td><td>${escapeHtml(MovStok.state.user?.email)}</td></tr>
+              <tr><td>Perfil</td><td>${escapeHtml(roleLabel(MovStok.state.user?.role))}</td></tr>
+              <tr><td>Status</td><td>${userStatusBadge(MovStok.state.user?.status)}</td></tr>
             </tbody>
           </table>
         `,
