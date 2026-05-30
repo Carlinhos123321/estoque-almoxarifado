@@ -90,7 +90,9 @@ def products_list():
         "sort": request.args.get("sort", "name"),
         "dir": request.args.get("dir", "asc")
     }
-    result = service.list_products(filters, page=request.args.get("page", 1, type=int))
+    page = request.args.get("page", 1, type=int)
+    per_page = request.args.get("per_page", 25, type=int)
+    result = service.list_products(filters, page=page, per_page=per_page)
     return _ok({
         "items": [p.to_dict() for p in result["items"]],
         "meta": result["meta"],
@@ -107,65 +109,26 @@ def products_get(pid):
 @bp.post("/products")
 @require_permission("products.create", api=True)
 def products_create():
-    data = request.get_json(silent=True) or {}
-    sku = (data.get("sku") or "").strip()
-    name = (data.get("name") or "").strip()
-    if not sku or not name:
-        return _err("SKU e Nome são obrigatórios.")
-    cid = _company_id()
-    if Product.query.filter_by(company_id=cid, sku=sku).first():
-        return _err("Já existe um produto com este SKU.")
-    p = Product(
-        company_id=cid,
-        category_id=data.get("category_id") or None,
-        supplier_id=data.get("supplier_id") or None,
-        location_id=data.get("location_id") or None,
-        sku=sku, name=name,
-        description=data.get("description"),
-        unit=(data.get("unit") or "UN").upper()[:20],
-        barcode=data.get("barcode"),
-        cost_price=_to_decimal(data.get("cost_price")),
-        sale_price=_to_decimal(data.get("sale_price")),
-        stock_quantity=_to_decimal(data.get("stock_quantity")),
-        min_stock=_to_decimal(data.get("min_stock")),
-        max_stock=_to_decimal(data.get("max_stock")),
-        status=data.get("status") or "active",
-        image_url=data.get("image_url"),
-        created_by_id=current_user.id,
-    )
-    db.session.add(p)
-    db.session.commit()
-    log_activity("create", "product", p.id, f"Produto criado: {p.sku} - {p.name}")
-    return _ok(p.to_dict(), 201)
+    try:
+        service = ProductService(_company_id(), current_user.id)
+        p = service.create(request.get_json(silent=True) or {})
+        AuditService.log("create", "product", p.id, f"Produto criado: {p.sku}", _company_id(), current_user.id)
+        return _ok(p.to_dict(), 201)
+    except ValueError as e:
+        return _err(str(e))
 
 
 @bp.put("/products/<int:pid>")
 @bp.patch("/products/<int:pid>")
 @require_permission("products.edit", api=True)
 def products_update(pid):
-    p = Product.query.filter_by(company_id=_company_id(), id=pid).first_or_404()
-    data = request.get_json(silent=True) or {}
-    for field in ("name", "description", "unit", "barcode", "image_url", "status"):
-        if field in data:
-            setattr(p, field, data[field])
-    for field in ("category_id", "supplier_id", "location_id"):
-        if field in data:
-            setattr(p, field, data[field] or None)
-    for field in ("cost_price", "sale_price", "min_stock", "max_stock"):
-        if field in data:
-            setattr(p, field, _to_decimal(data[field]))
-    if "sku" in data and data["sku"]:
-        new_sku = data["sku"].strip()
-        if new_sku != p.sku and Product.query.filter_by(company_id=p.company_id, sku=new_sku).first():
-            return _err("Já existe um produto com este SKU.")
-        p.sku = new_sku
-    # stock_quantity can be edited only via manual adjustment
-    if "stock_quantity" in data and current_user.can("stock.entry"):
-        p.stock_quantity = _to_decimal(data["stock_quantity"])
-    p.updated_by_id = current_user.id
-    db.session.commit()
-    AuditService.log("update", "product", p.id, f"Produto atualizado: {p.sku}", _company_id(), current_user.id)
-    return _ok(p.to_dict())
+    try:
+        service = ProductService(_company_id(), current_user.id)
+        p = service.update(pid, request.get_json(silent=True) or {})
+        AuditService.log("update", "product", p.id, f"Produto atualizado: {p.sku}", _company_id(), current_user.id)
+        return _ok(p.to_dict())
+    except ValueError as e:
+        return _err(str(e))
 
 
 @bp.delete("/products/<int:pid>")
@@ -503,70 +466,12 @@ def outputs_list():
 @bp.post("/outputs")
 @require_permission("stock.output", api=True)
 def outputs_create():
-    data = request.get_json(silent=True) or {}
-    pid = data.get("product_id")
-    qty = _to_decimal(data.get("quantity"))
-    if not pid:
-        return _err("Produto é obrigatório.")
-    if qty <= 0:
-        return _err("Quantidade deve ser maior que zero.")
-    product = Product.query.get(pid)
-    if not product:
-        return _err("Produto não encontrado.", 404)
-    if (product.stock_quantity or 0) < qty:
-        return _err(f"Estoque insuficiente. Disponível: {float(product.stock_quantity or 0)}",
-                    status=400)
-
-    unit_price = _to_decimal(data.get("unit_price", product.sale_price))
-    out = StockOutput(
-        company_id=_company_id(),
-        product_id=product.id,
-        employee_id=data.get("employee_id") or None,
-        document=data.get("document"),
-        quantity=qty,
-        unit_price=unit_price,
-        total_price=qty * unit_price,
-        reason=data.get("reason") or "consumption",
-        destination=data.get("destination"),
-        notes=data.get("notes"),
-        output_date=datetime.utcnow(),
-        status="confirmed",
-        created_by_id=current_user.id,
-    )
-    product.stock_quantity = (product.stock_quantity or 0) - qty
-    db.session.add(out)
-    db.session.flush()
-    db.session.add(StockMovement(
-        company_id=_company_id(),
-        product_id=product.id,
-        output_id=out.id,
-        movement_type="output",
-        document=out.document,
-        quantity=-qty,
-        unit_value=unit_price,
-        total_value=qty * unit_price,
-        balance_after=product.stock_quantity,
-        reason=out.reason,
-        movement_date=out.output_date,
-        created_by_id=current_user.id,
-    ))
-    db.session.commit()
-
-    # Low-stock notification
-    if product.stock_quantity <= product.min_stock:
-        n = Notification(
-            company_id=_company_id(),
-            type="warning",
-            title="Estoque baixo",
-            message=f"{product.sku} - {product.name} atingiu o estoque mínimo.",
-            link=f"/app/produtos?id={product.id}",
-        )
-        db.session.add(n)
-        db.session.commit()
-
-    log_activity("output", "stock_output", out.id,
-                 f"-{qty} de {product.sku} ({product.name})")
-    return _ok(out.to_dict(), 201)
+    try:
+        service = StockService(_company_id(), current_user.id)
+        out = service.register_output(request.get_json(silent=True) or {})
+        return _ok(out.to_dict(), 201)
+    except ValueError as e:
+        return _err(str(e))
 
 
 @bp.delete("/outputs/<int:oid>")

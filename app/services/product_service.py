@@ -38,7 +38,7 @@ class ProductService:
         direction = desc if filters.get("dir") == "desc" else lambda x: x
         query = query.order_by(direction(sort_col))
 
-        return paginate_query(query, page=page, per_page=per_page)
+        return paginate_query(query, default_per_page=per_page)
 
     def create(self, data: dict):
         sku = data.get("sku", "").strip()
@@ -67,7 +67,7 @@ class ProductService:
     def update(self, product_id, data: dict):
         product = Product.query.filter_by(company_id=self.company_id, id=product_id).first_or_404()
         
-        editable_fields = ["name", "description", "unit", "cost_price", "sale_price", "min_stock", "category_id", "supplier_id", "status"]
+        editable_fields = ["sku", "name", "description", "unit", "cost_price", "sale_price", "min_stock", "max_stock", "category_id", "supplier_id", "location_id", "status"]
         for field in editable_fields:
             if field in data:
                 val = data[field]
