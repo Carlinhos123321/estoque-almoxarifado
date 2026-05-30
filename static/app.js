@@ -717,16 +717,19 @@ function dashboardCarousel(banners) {
   const style = `
     <style>
       .dashboard-banner { margin-bottom: 2rem; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
-      .carousel { position: relative; width: 100%; height: 320px; background: #1e293b; }
+      .carousel { position: relative; width: 100%; height: 320px; background: #000; }
       .carousel-inner { position: relative; width: 100%; height: 100%; }
       .carousel-item { 
         position: absolute; inset: 0; opacity: 0; transition: opacity 0.8s ease-in-out; background-repeat: no-repeat;
         background-size: cover; background-position: center; display: flex; align-items: flex-end;
+        filter: brightness(1.1) contrast(1.15) saturate(1.1);
       }
       .carousel-item.active { opacity: 1; z-index: 1; }
       .carousel-caption { 
-        padding: 40px; color: white; width: 100%;
-        background: linear-gradient(transparent, rgba(0,0,0,0.8));
+        padding: 40px; color: white; width: 100%; height: 100%;
+        display: flex; flex-direction: column; justify-content: flex-end;
+        background: linear-gradient(90deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.25) 30%, rgba(0,0,0,0.05) 60%, rgba(0,0,0,0) 100%);
+        text-shadow: 0 2px 10px rgba(0,0,0,0.3);
       }
       .carousel-caption h2 { font-size: 2rem; margin-bottom: 8px; font-weight: 700; }
       .carousel-caption p { font-size: 1.1rem; opacity: 0.9; }
