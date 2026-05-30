@@ -130,8 +130,8 @@ def dashboard():
 
     # Dashboard Banners (Imagens fixas/locais para persistência no Railway)
     banners = [
-        {"id": 1, "image": "/static/img/banners/banner1.jpg", "title": "Gestão de Estoque", "desc": "Controle total de entradas e saídas."},
-        {"id": 2, "image": "/static/img/banners/banner2.jpg", "title": "Relatórios em Tempo Real", "desc": "Analise seu inventário com um clique."},
+        {"id": 1, "image": "img/banners/banner1.jpg", "title": "Gestão de Estoque", "desc": "Controle total de entradas e saídas."},
+        {"id": 2, "image": "img/banners/banner2.jpg", "title": "Relatórios em Tempo Real", "desc": "Analise seu inventário com um clique."},
     ]
 
     return _ok({

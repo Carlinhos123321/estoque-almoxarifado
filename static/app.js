@@ -720,7 +720,7 @@ function dashboardCarousel(banners) {
       .carousel { position: relative; width: 100%; height: 320px; background: #1e293b; }
       .carousel-inner { position: relative; width: 100%; height: 100%; }
       .carousel-item { 
-        position: absolute; inset: 0; opacity: 0; transition: opacity 0.8s ease-in-out; 
+        position: absolute; inset: 0; opacity: 0; transition: opacity 0.8s ease-in-out; background-repeat: no-repeat;
         background-size: cover; background-position: center; display: flex; align-items: flex-end;
       }
       .carousel-item.active { opacity: 1; z-index: 1; }
@@ -751,7 +751,7 @@ function dashboardCarousel(banners) {
     <div class="carousel" id="main-carousel">
       <div class="carousel-inner">
         ${banners.map((b, i) => `
-          <div class="carousel-item ${i === 0 ? "active" : ""}" style="background-image: url('${b.image}')">
+          <div class="carousel-item ${i === 0 ? "active" : ""}" style="background-image: url('/static/${b.image}')">
             <div class="carousel-caption">
               <h2>${escapeHtml(b.title)}</h2>
               <p>${escapeHtml(b.desc)}</p>
