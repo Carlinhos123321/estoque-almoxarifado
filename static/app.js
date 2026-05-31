@@ -20,19 +20,28 @@ const MovStok = {
       locations: [],
     },
     charts: {},
+    security: {
+      csrfToken: null,
+    },
   },
 
   // Camada de Serviços: Abstração de I/O
   Services: {
     async request(path, options = {}) {
+      const headers = {
+        "Accept": "application/json",
+        "X-Requested-With": "XMLHttpRequest",
+        ...(options.body ? { "Content-Type": "application/json" } : {}),
+        ...(options.headers || {}),
+      };
+
+      if (isUnsafeRequest(options.method)) {
+        headers["X-CSRF-Token"] = await getCsrfToken();
+      }
+
       const config = {
         credentials: "same-origin",
-        headers: {
-          "Accept": "application/json",
-          "X-Requested-With": "XMLHttpRequest",
-          ...(options.body ? { "Content-Type": "application/json" } : {}),
-          ...(options.headers || {}),
-        },
+        headers,
         ...options,
       };
 
@@ -45,6 +54,7 @@ const MovStok = {
 
       if (!response.ok) {
         if (response.status === 401) MovStok.Auth.logout(true);
+        if (response.status === 419) MovStok.state.security.csrfToken = null;
         throw new Error(payload.error || "Operação falhou.");
       }
       return payload;
@@ -210,16 +220,46 @@ function buildQuery(params = {}) {
   return query ? `?${query}` : "";
 }
 
-async function api(path, options = {}) {
-  // Centralização de segurança e headers ERP
-  const config = {
+function isUnsafeRequest(method = "GET") {
+  return ["POST", "PUT", "PATCH", "DELETE"].includes(String(method || "GET").toUpperCase());
+}
+
+async function getCsrfToken() {
+  if (MovStok.state.security.csrfToken) {
+    return MovStok.state.security.csrfToken;
+  }
+
+  const response = await fetch("/api/auth/csrf", {
     credentials: "same-origin",
     headers: {
       Accept: "application/json",
       "X-Requested-With": "XMLHttpRequest",
-      ...(options.body ? { "Content-Type": "application/json" } : {}),
-      ...(options.headers || {}),
     },
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok || !payload.csrf_token) {
+    throw new Error("Não foi possível validar a segurança da sessão.");
+  }
+  MovStok.state.security.csrfToken = payload.csrf_token;
+  return payload.csrf_token;
+}
+
+async function api(path, options = {}) {
+  // Centralização de segurança e headers ERP
+  const headers = {
+    Accept: "application/json",
+    "X-Requested-With": "XMLHttpRequest",
+    ...(options.body ? { "Content-Type": "application/json" } : {}),
+    ...(options.headers || {}),
+  };
+
+  if (isUnsafeRequest(options.method)) {
+    headers["X-CSRF-Token"] = await getCsrfToken();
+  }
+
+  const config = {
+    credentials: "same-origin",
+    headers,
     ...options,
   };
 
@@ -236,6 +276,9 @@ async function api(path, options = {}) {
   if (!response.ok) {
     if (response.status === 401) {
       showAuth();
+    }
+    if (response.status === 419) {
+      MovStok.state.security.csrfToken = null;
     }
     const message = typeof payload === "string"
       ? payload
@@ -2420,6 +2463,10 @@ function bindShellEvents() {
     sidebar.classList.remove("show-mobile");
     sidebarBackdrop?.classList.remove("show");
   };
+
+  $("#login-show-password")?.addEventListener("change", (event) => {
+    $("#login-password").type = event.currentTarget.checked ? "text" : "password";
+  });
 
   $("#login-form").addEventListener("submit", async (event) => {
     event.preventDefault();

@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 
 from .extensions import db, login_manager, migrate
 from .config import Config
+from .security import init_security
 
 load_dotenv()
 
@@ -24,6 +25,8 @@ def create_app(config_class: type = Config) -> Flask:
     login_manager.login_view = "auth.login_page"
     login_manager.login_message = "Faça login para continuar."
     login_manager.login_message_category = "warning"
+
+    init_security(app)
 
     # Models must be imported so SQLAlchemy registers them
     from . import models  # noqa: F401

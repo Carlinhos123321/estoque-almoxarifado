@@ -9,6 +9,7 @@ from email_validator import EmailNotValidError, validate_email
 from ..extensions import db
 from ..helpers import log_activity
 from ..models import ActivityLog, Company, PasswordResetToken, Permission, Role, User
+from ..security import get_client_ip, get_csrf_token, rate_limit
 from ..services.email import queue_password_reset_email
 
 bp = Blueprint("auth", __name__)
@@ -20,7 +21,13 @@ def login_page():
     return current_app.send_static_file("index.html")
 
 
+@bp.get("/api/auth/csrf")
+def api_csrf():
+    return jsonify({"csrf_token": get_csrf_token()})
+
+
 @bp.post("/api/auth/login")
+@rate_limit(limit=8, window_seconds=15 * 60, key_prefix="login")
 def api_login():
     data = request.get_json(silent=True) or request.form
     email = (data.get("email") or "").strip().lower()
@@ -53,6 +60,7 @@ def api_logout():
 
 
 @bp.post("/api/auth/register")
+@rate_limit(limit=3, window_seconds=10 * 60, key_prefix="register")
 def api_register():
     data = request.get_json(silent=True) or {}
     name = (data.get("name") or "").strip()[:100]
@@ -63,7 +71,7 @@ def api_register():
     # Proteção Anti-Spam: Limita cadastros por IP (max 3 a cada 10 minutos)
     ten_min_ago = datetime.utcnow() - timedelta(minutes=10)
     recent_attempts = ActivityLog.query.filter(
-        ActivityLog.ip == (request.headers.get("X-Forwarded-For", request.remote_addr)),
+        ActivityLog.ip == get_client_ip(),
         ActivityLog.action == "create",
         ActivityLog.entity == "user",
         ActivityLog.created_at >= ten_min_ago
@@ -128,6 +136,7 @@ def api_register():
 
 
 @bp.post("/api/auth/forgot-password")
+@rate_limit(limit=5, window_seconds=15 * 60, key_prefix="forgot-password")
 def api_forgot_password():
     data = request.get_json(silent=True) or {}
     raw_email = (data.get("email") or "").strip().lower()
