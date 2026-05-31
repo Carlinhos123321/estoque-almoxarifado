@@ -179,40 +179,13 @@ table { border-collapse: collapse; width: 100%; }
 
 .auth-right {
   position: relative;
-  background:
-    linear-gradient(135deg, rgba(15,23,42,0.92) 0%, rgba(30,58,138,0.85) 100%),
-    url('https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?q=80&w=1800&auto=format&fit=crop');
+  background: url('/static/img/auth/login-warehouse.png');
   background-size: cover;
-  background-position: center;
-  display: flex; align-items: flex-end;
+  background-position: center center;
+  background-repeat: no-repeat;
+  display: block;
+  min-width: 0;
 }
-.overlay { display: none; }
-.right-content {
-  position: relative; z-index: 2;
-  padding: 70px;
-  color: #fff;
-  max-width: 640px;
-}
-.right-content h2 {
-  font-size: 32px; line-height: 1.25;
-  margin-bottom: 18px; font-weight: 700;
-}
-.right-content p {
-  line-height: 1.7;
-  color: rgba(255,255,255,0.82);
-  font-size: 14.5px;
-}
-.right-features {
-  list-style: none;
-  margin-top: 28px;
-  display: flex; flex-direction: column; gap: 10px;
-}
-.right-features li {
-  display: flex; align-items: center; gap: 10px;
-  font-size: 14px; color: rgba(255,255,255,0.92);
-}
-.right-features i { color: #4ade80; }
-
 /* ===================================================
    ERP SHELL
    =================================================== */
