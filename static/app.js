@@ -17,6 +17,7 @@ const MovStok = {
       products: [],
       employees: [],
       roles: [],
+      permissions: [],
       locations: [],
     },
     charts: {},
@@ -124,9 +125,11 @@ const Pages = {
   funcionarios: "Funcionários",
   matriculas: "Matrículas",
   relatorios: "Relatórios",
+  financeiro: "Financeiro",
   atividades: "Atividades",
   usuarios: "Usuários",
   configuracoes: "Configurações",
+  administracao: "Administração",
 };
 
 const Icons = {
@@ -140,9 +143,29 @@ const Icons = {
   funcionarios: "fa-id-badge",
   matriculas: "fa-id-card",
   relatorios: "fa-chart-column",
+  financeiro: "fa-coins",
   atividades: "fa-clipboard-list",
   usuarios: "fa-user-shield",
   configuracoes: "fa-gear",
+  administracao: "fa-screwdriver-wrench",
+};
+
+const PagePermissions = {
+  dashboard: "dashboard.view",
+  produtos: "products.view",
+  categorias: "categories.view",
+  fornecedores: "suppliers.view",
+  entradas: "stock.entry",
+  saidas: "stock.output",
+  estoque: "stock.view",
+  funcionarios: "employees.view",
+  matriculas: "employees.view",
+  relatorios: "reports.view",
+  financeiro: "finance.view",
+  atividades: "admin.system",
+  usuarios: "users.manage",
+  configuracoes: "settings.view",
+  administracao: "admin.system",
 };
 
 const Money = new Intl.NumberFormat("pt-BR", {
@@ -206,7 +229,12 @@ function initials(name) {
 }
 
 function hasPermission(code) {
-  return MovStok.state.permissions.has(code) || MovStok.state.user?.role?.name === "admin";
+  return MovStok.state.permissions.has(code) || ["admin", "super_admin"].includes(MovStok.state.user?.role?.name);
+}
+
+function canAccessPage(page) {
+  const permission = PagePermissions[page];
+  return !permission || hasPermission(permission);
 }
 
 function buildQuery(params = {}) {
@@ -314,6 +342,17 @@ function pageHeader(page, subtitle, actions = "") {
         <div class="subtitle">${escapeHtml(subtitle)}</div>
       </div>
       <div class="page-actions">${actions}</div>
+    </div>
+  `;
+}
+
+function forbiddenPage(page) {
+  return `
+    ${pageHeader(page, "Seu perfil atual nao permite acessar esta area.")}
+    <div class="panel">
+      <div class="panel-body">
+        ${emptyState("fa-lock", "Acesso restrito", "Solicite a um Super Admin ou administrador a permissao necessaria.")}
+      </div>
     </div>
   `;
 }
@@ -547,6 +586,9 @@ async function loadLookupData(types = ["categories", "suppliers", "products", "e
   if (types.includes("roles")) {
     tasks.push(api("/api/roles").then((data) => { MovStok.state.cache.roles = data.items || []; }));
   }
+  if (types.includes("permissions")) {
+    tasks.push(api("/api/permissions").then((data) => { MovStok.state.cache.permissions = data.items || []; }));
+  }
   if (types.includes("locations")) {
     tasks.push(api("/api/locations").then((data) => { MovStok.state.cache.locations = data.items || []; }));
   }
@@ -674,6 +716,14 @@ function updateUserBox() {
   $("#user-avatar").textContent = initials(MovStok.state.user?.name);
 }
 
+function enforceMenuPermissions() {
+  $all(".menu-item").forEach((item) => {
+    const allowed = canAccessPage(item.dataset.page);
+    item.hidden = !allowed;
+    item.setAttribute("aria-hidden", allowed ? "false" : "true");
+  });
+}
+
 async function checkSession() {
   const session = await api("/api/auth/me");
   if (!session.authenticated) {
@@ -683,6 +733,7 @@ async function checkSession() {
   MovStok.state.user = session.user;
   MovStok.state.permissions = new Set(session.permissions || []);
   updateUserBox();
+  enforceMenuPermissions();
   showApp();
   return true;
 }
@@ -724,13 +775,20 @@ const PageRenderers = {
   funcionarios: renderEmployees,
   matriculas: renderEnrollments,
   relatorios: renderReports,
+  financeiro: renderFinance,
   atividades: renderActivities,
   usuarios: renderUsers,
   configuracoes: renderSettings,
+  administracao: renderAdministration,
 };
 
 async function renderPage(page = pageFromPath()) {
   destroyCharts();
+  if (!canAccessPage(page)) {
+    updateNavigation(page);
+    pageWrap().innerHTML = forbiddenPage(page);
+    return;
+  }
   updateNavigation(page);
   setLoading(Pages[page]);
 
@@ -1920,6 +1978,55 @@ async function renderReports() {
   `;
 }
 
+async function renderFinance() {
+  const summary = await api("/api/finance/summary");
+  pageWrap().innerHTML = `
+    ${pageHeader("financeiro", "Valores operacionais do estoque e movimentacoes financeiras.")}
+    <div class="kpi-grid">
+      ${kpiCard("Valor em estoque", fmtMoney(summary.stock_value), "Custo atual dos saldos", "fa-boxes-stacked", "blue")}
+      ${kpiCard("Compras 30 dias", fmtMoney(summary.entries_value_30d), "Entradas confirmadas", "fa-file-invoice-dollar", "green")}
+      ${kpiCard("Saidas 30 dias", fmtMoney(summary.outputs_value_30d), "Saidas confirmadas", "fa-receipt", "amber")}
+    </div>
+    <section class="panel">
+      <div class="panel-head"><h3>Controle financeiro</h3></div>
+      <div class="panel-body">
+        <table class="data-table">
+          <tbody>
+            <tr><td><strong>Permissao ativa</strong><div class="text-muted">Somente perfis com finance.view acessam esta tela.</div></td><td>${statusBadge("ready", { ready: { label: "Protegido", cls: "info" } })}</td></tr>
+            <tr><td><strong>Gestao financeira</strong><div class="text-muted">Use finance.manage para liberar futuras acoes de edicao financeira.</div></td><td>${hasPermission("finance.manage") ? statusBadge("ready", { ready: { label: "Liberada", cls: "success" } }) : statusBadge("locked", { locked: { label: "Restrita", cls: "neutral" } })}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  `;
+}
+
+async function renderAdministration() {
+  const data = await api("/api/admin/system");
+  pageWrap().innerHTML = `
+    ${pageHeader("administracao", "Administracao do sistema, seguranca e governanca de acesso.")}
+    <div class="kpi-grid">
+      ${kpiCard("Usuarios", data.users, "Nesta empresa", "fa-users", "blue")}
+      ${kpiCard("Perfis", data.roles, "Roles cadastradas", "fa-user-shield", "cyan")}
+      ${kpiCard("Permissoes", data.permissions, "Codigos RBAC", "fa-key", "green")}
+      ${kpiCard("Auditoria", data.activities, "Eventos registrados", "fa-clipboard-list", "amber")}
+    </div>
+    <section class="panel">
+      <div class="panel-head"><h3>Acoes administrativas</h3></div>
+      <div class="panel-body">
+        <table class="data-table">
+          <tbody>
+            <tr><td><strong>Gerenciar usuarios</strong><div class="text-muted">Criar, editar, desativar e alterar perfis.</div></td><td class="actions"><button class="btn sm ghost" id="admin-users"><i class="fa-solid fa-user-shield"></i> Abrir</button></td></tr>
+            <tr><td><strong>Auditoria</strong><div class="text-muted">Acompanhar log de acoes do sistema.</div></td><td class="actions"><button class="btn sm ghost" id="admin-activities"><i class="fa-solid fa-clipboard-list"></i> Abrir</button></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  `;
+  $("#admin-users")?.addEventListener("click", () => navigate("usuarios"));
+  $("#admin-activities")?.addEventListener("click", () => navigate("atividades"));
+}
+
 async function renderActivities(params = {}) {
   const data = await api(`/api/activities${buildQuery({ page: params.page || 1, action: params.action, entity: params.entity })}`);
   pageWrap().innerHTML = `
@@ -1976,7 +2083,7 @@ function activitiesTable(items) {
 }
 
 async function renderUsers(params = {}) {
-  await loadLookupData(["roles"]);
+  await loadLookupData(["roles", "permissions"]);
   const data = await api(`/api/users${buildQuery({ search: params.search })}`);
   pageWrap().innerHTML = `
     ${pageHeader("usuarios", "Controle de acesso, perfis e permissões por função.", hasPermission("users.manage") ? `
@@ -2027,6 +2134,7 @@ function usersTable(items) {
 }
 
 function userForm(u = {}) {
+  const selectedRole = u.role?.id || "";
   return `
     <form id="user-form" class="form-grid">
       <div class="field full">
@@ -2043,10 +2151,14 @@ function userForm(u = {}) {
       </div>
       <div class="field">
         <label>Perfil</label>
-        <select name="role_id">
+        <select name="role_id" id="user-role-select">
           <option value="">Sem perfil</option>
-          ${optionList(MovStok.state.cache.roles, u.role?.id, "label")}
+          ${optionList(MovStok.state.cache.roles, selectedRole, "label")}
         </select>
+      </div>
+      <div class="field full">
+        <label>PermissÃµes do perfil</label>
+        <div id="role-permission-preview" style="min-height:42px;border:1px solid var(--border-strong);border-radius:var(--radius);padding:8px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;background:var(--panel-2)"></div>
       </div>
       <div class="field">
         <label>Status</label>
@@ -2064,6 +2176,21 @@ function userForm(u = {}) {
   `;
 }
 
+function rolePermissionPreview(roleId) {
+  const role = MovStok.state.cache.roles.find((item) => Number(item.id) === Number(roleId));
+  if (!role) return `<span class="text-muted">Selecione um perfil para aplicar permissÃµes.</span>`;
+  if (["admin", "super_admin"].includes(role.name)) {
+    return `<span class="badge success">Acesso total</span>`;
+  }
+  const labels = (role.permissions || []).map((code) => {
+    const permission = MovStok.state.cache.permissions.find((item) => item.code === code);
+    return permission?.label || code;
+  });
+  return labels.length
+    ? labels.map((label) => `<span class="badge info">${escapeHtml(label)}</span>`).join("")
+    : `<span class="badge neutral">Sem permissÃµes</span>`;
+}
+
 function openUserModal(user = null) {
   openModal({
     title: user ? "Editar usuário" : "Novo usuário",
@@ -2073,6 +2200,13 @@ function openUserModal(user = null) {
       <button class="btn primary" type="submit" form="user-form">Salvar</button>
     `,
   });
+  const roleSelect = $("#user-role-select");
+  const permissionPreview = $("#role-permission-preview");
+  const refreshPermissions = () => {
+    permissionPreview.innerHTML = rolePermissionPreview(roleSelect.value);
+  };
+  roleSelect?.addEventListener("change", refreshPermissions);
+  refreshPermissions();
   $("#user-form").addEventListener("submit", async (event) => {
     event.preventDefault();
     try {

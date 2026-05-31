@@ -17,6 +17,10 @@ PERMISSIONS = [
     ("products", "products.create", "Criar produtos"),
     ("products", "products.edit", "Editar produtos"),
     ("products", "products.delete", "Excluir produtos"),
+    ("finance", "finance.view", "Visualizar financeiro"),
+    ("finance", "finance.manage", "Gerenciar financeiro"),
+    ("admin", "admin.system", "Administrar sistema"),
+    ("users", "users.view", "Visualizar usuarios"),
     ("stock", "stock.view", "Visualizar estoque"),
     ("stock", "stock.entry", "Registrar entradas"),
     ("stock", "stock.output", "Registrar saídas"),
@@ -34,6 +38,11 @@ PERMISSIONS = [
 ]
 
 ROLES = {
+    "super_admin": {
+        "label": "Super Admin",
+        "description": "Acesso irrestrito a todos os modulos, telas e configuracoes",
+        "permissions": "*",
+    },
     "admin": {
         "label": "Administrador",
         "description": "Acesso total ao sistema",
@@ -49,7 +58,7 @@ ROLES = {
             "categories.view", "categories.manage",
             "employees.view", "employees.manage",
             "reports.view", "reports.export",
-            "settings.view",
+            "settings.view", "users.view",
         ],
     },
     "operator": {
@@ -114,9 +123,18 @@ def _ensure_company():
 
 def _ensure_admin(company):
     email = current_app.config["ADMIN_EMAIL"]
-    if User.query.filter_by(email=email).first():
+    admin_role = Role.query.filter_by(name="super_admin").first() or Role.query.filter_by(name="admin").first()
+    existing = User.query.filter_by(email=email).first()
+    if existing:
+        has_super_admin = (
+            User.query.join(Role)
+            .filter(Role.name == "super_admin", User.status == "active")
+            .first()
+        )
+        if admin_role and admin_role.name == "super_admin" and not has_super_admin:
+            existing.role_id = admin_role.id
+            db.session.commit()
         return
-    admin_role = Role.query.filter_by(name="admin").first()
     user = User(
         name=current_app.config["ADMIN_NAME"],
         email=email,

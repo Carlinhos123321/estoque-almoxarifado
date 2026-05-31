@@ -781,7 +781,7 @@ def notifications_read_all():
 # Activity log
 # ---------------------------------------------------------------------------
 @bp.get("/activities")
-@login_required
+@require_permission("admin.system", api=True)
 def activities_list():
     cid = _company_id()
     q = ActivityLog.query.filter_by(company_id=cid)
@@ -801,7 +801,7 @@ def activities_list():
 # Company, Users, Roles
 # ---------------------------------------------------------------------------
 @bp.get("/company")
-@login_required
+@require_permission("settings.view", api=True)
 def company_get():
     cid = _company_id()
     c = Company.query.get(cid)
@@ -826,15 +826,26 @@ def company_update():
 
 
 @bp.get("/roles")
-@login_required
+@require_permission("users.manage", api=True)
 def roles_list():
     return _ok({"items": [r.to_dict() for r in Role.query.order_by(Role.name).all()]})
 
 
 @bp.get("/permissions")
-@login_required
+@require_permission("users.manage", api=True)
 def permissions_list():
     return _ok({"items": [p.to_dict() for p in Permission.query.order_by(Permission.module, Permission.code).all()]})
+
+
+def _resolve_role(role_id):
+    if not role_id:
+        return None
+    role = db.session.get(Role, int(role_id))
+    if not role:
+        raise ValueError("Perfil informado nÃ£o existe.")
+    if role.name == "super_admin" and not current_user.is_super_admin:
+        raise ValueError("Apenas Super Admin pode atribuir o perfil Super Admin.")
+    return role
 
 
 @bp.get("/users")
@@ -862,10 +873,14 @@ def users_create():
         return _err("Senha deve ter pelo menos 6 caracteres.")
     if User.query.filter_by(email=email).first():
         return _err("Email já cadastrado.")
+    try:
+        role = _resolve_role(data.get("role_id"))
+    except (TypeError, ValueError) as exc:
+        return _err(str(exc), 403)
     u = User(
         name=name, email=email,
         company_id=_company_id(),
-        role_id=data.get("role_id") or None,
+        role_id=role.id if role else None,
         phone=data.get("phone"),
         status=data.get("status") or "active",
     )
@@ -886,7 +901,11 @@ def users_update(uid):
         if f in data:
             setattr(u, f, data[f])
     if "role_id" in data:
-        u.role_id = data["role_id"] or None
+        try:
+            role = _resolve_role(data["role_id"])
+        except (TypeError, ValueError) as exc:
+            return _err(str(exc), 403)
+        u.role_id = role.id if role else None
     if "password" in data and data["password"]:
         if len(data["password"]) < 6:
             return _err("Senha deve ter pelo menos 6 caracteres.")
@@ -912,7 +931,7 @@ def users_delete(uid):
 # Stock locations
 # ---------------------------------------------------------------------------
 @bp.get("/locations")
-@login_required
+@require_permission("settings.view", api=True)
 def locations_list():
     cid = _company_id()
     q = StockLocation.query.filter_by(company_id=cid)
@@ -932,6 +951,51 @@ def locations_create():
     db.session.add(l)
     db.session.commit()
     return _ok(l.to_dict(), 201)
+
+
+# ---------------------------------------------------------------------------
+# Finance and system administration
+# ---------------------------------------------------------------------------
+@bp.get("/finance/summary")
+@require_permission("finance.view", api=True)
+def finance_summary():
+    cid = _company_id()
+    products_value = db.session.query(
+        func.coalesce(func.sum(Product.stock_quantity * Product.cost_price), 0)
+    ).filter(Product.company_id == cid).scalar() or 0
+    last_30 = datetime.utcnow() - timedelta(days=30)
+    entry_value = db.session.query(
+        func.coalesce(func.sum(StockEntry.total_cost), 0)
+    ).filter(
+        StockEntry.company_id == cid,
+        StockEntry.entry_date >= last_30,
+        StockEntry.status == "confirmed",
+    ).scalar() or 0
+    output_value = db.session.query(
+        func.coalesce(func.sum(StockOutput.total_price), 0)
+    ).filter(
+        StockOutput.company_id == cid,
+        StockOutput.output_date >= last_30,
+        StockOutput.status == "confirmed",
+    ).scalar() or 0
+    return _ok({
+        "stock_value": float(products_value),
+        "entries_value_30d": float(entry_value),
+        "outputs_value_30d": float(output_value),
+    })
+
+
+@bp.get("/admin/system")
+@require_permission("admin.system", api=True)
+def admin_system():
+    cid = _company_id()
+    return _ok({
+        "users": User.query.filter_by(company_id=cid).count(),
+        "roles": Role.query.count(),
+        "permissions": Permission.query.count(),
+        "activities": ActivityLog.query.filter_by(company_id=cid).count(),
+        "company_id": cid,
+    })
 
 
 # ---------------------------------------------------------------------------

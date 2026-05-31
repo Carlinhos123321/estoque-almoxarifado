@@ -151,7 +151,11 @@ class User(db.Model, UserMixin, TimestampMixin):
     # auth helpers
     @property
     def is_admin(self) -> bool:
-        return bool(self.role and self.role.name == "admin")
+        return bool(self.role and self.role.name in {"admin", "super_admin"})
+
+    @property
+    def is_super_admin(self) -> bool:
+        return bool(self.role and self.role.name == "super_admin")
 
     def can(self, permission_code: str) -> bool:
         if self.is_admin:
