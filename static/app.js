@@ -19,7 +19,6 @@ const MovStok = {
       roles: [],
       locations: [],
     },
-    carouselInterval: null,
     charts: {},
   },
 
@@ -514,10 +513,6 @@ async function loadLookupData(types = ["categories", "suppliers", "products", "e
 function destroyCharts() {
   Object.values(MovStok.state.charts).forEach((chart) => chart?.destroy?.());
   MovStok.state.charts = {};
-  if (MovStok.state.carouselInterval) {
-    clearInterval(MovStok.state.carouselInterval);
-    MovStok.state.carouselInterval = null;
-  }
 }
 
 function renderLineChart(canvasId, labels, entries, outputs) {
@@ -723,10 +718,6 @@ async function renderDashboard() {
         : "Bem-vindo! Comece cadastrando seus primeiros produtos para ativar as estatísticas do painel."
     )}
 
-    <div class="dashboard-banner">
-      ${dashboardCarousel(data.banners || [])}
-    </div>
-
     <div class="kpi-grid">
       ${kpiCard("Produtos", kpi.total_products, "Cadastrados no catálogo", "fa-barcode")}
       ${kpiCard("Estoque atual", fmtQty(kpi.total_units), "Unidades totais", "fa-boxes-stacked", "green")}
@@ -792,99 +783,6 @@ async function renderDashboard() {
     categories.map((item) => item.count),
   );
 
-  if (data.banners?.length) {
-    initDashboardCarousel();
-  }
-}
-
-function dashboardCarousel(banners) {
-  if (!banners.length) return "";
-  
-  // Estilização mínima injetada para garantir o funcionamento visual
-  const style = `
-    <style>
-      .dashboard-banner { margin-bottom: 2rem; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
-      .carousel { position: relative; width: 100%; height: 320px; background: #000; }
-      .carousel-inner { position: relative; width: 100%; height: 100%; }
-      .carousel-item { 
-        position: absolute; inset: 0; opacity: 0; transition: opacity 0.8s ease-in-out; background-repeat: no-repeat;
-        background-size: cover; background-position: center; display: flex; align-items: flex-end;
-        filter: brightness(1.1) contrast(1.15) saturate(1.1);
-      }
-      .carousel-item.active { opacity: 1; z-index: 1; }
-      .carousel-caption { 
-        padding: 40px; color: white; width: 100%; height: 100%;
-        display: flex; flex-direction: column; justify-content: flex-end;
-        background: linear-gradient(90deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.25) 30%, rgba(0,0,0,0.05) 60%, rgba(0,0,0,0) 100%);
-        text-shadow: 0 2px 10px rgba(0,0,0,0.3);
-      }
-      .carousel-caption h2 { font-size: 2rem; margin-bottom: 8px; font-weight: 700; }
-      .carousel-caption p { font-size: 1.1rem; opacity: 0.9; }
-      .carousel-nav { 
-        position: absolute; bottom: 20px; right: 20px; z-index: 10; display: flex; gap: 8px;
-      }
-      .nav-dot { 
-        width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.3); 
-        border: none; cursor: pointer; transition: all 0.3s;
-      }
-      .nav-dot.active { background: white; transform: scale(1.2); }
-      @media (max-width: 768px) {
-        .carousel { height: 240px; }
-        .carousel-caption h2 { font-size: 1.5rem; }
-        .carousel-caption p { font-size: 0.9rem; }
-      }
-    </style>
-  `;
-
-  return `
-    ${style}
-    <div class="carousel" id="main-carousel">
-      <div class="carousel-inner">
-        ${banners.map((b, i) => `
-          <div class="carousel-item ${i === 0 ? "active" : ""}" style="background-image: url('/static/${b.image}')">
-            <div class="carousel-caption">
-              <h2>${escapeHtml(b.title)}</h2>
-              <p>${escapeHtml(b.desc)}</p>
-            </div>
-          </div>
-        `).join("")}
-      </div>
-      <div class="carousel-nav">
-        ${banners.map((_, i) => `<button class="nav-dot ${i === 0 ? "active" : ""}" data-index="${i}"></button>`).join("")}
-      </div>
-    </div>
-  `;
-}
-
-function initDashboardCarousel() {
-  const carousel = $("#main-carousel");
-  if (!carousel) return;
-  const items = $all(".carousel-item", carousel);
-  const dots = $all(".nav-dot", carousel);
-  let current = 0;
-
-  const show = (index) => {
-    items.forEach((it, i) => it.classList.toggle("active", i === index));
-    dots.forEach((d, i) => d.classList.toggle("active", i === index));
-    current = index;
-  };
-
-  dots.forEach((dot) => {
-    dot.addEventListener("click", () => {
-      show(Number(dot.dataset.index));
-      // Reset timer on manual click
-      clearInterval(MovStok.state.carouselInterval);
-      startTimer();
-    });
-  });
-
-  const startTimer = () => {
-    MovStok.state.carouselInterval = setInterval(() => {
-      show((current + 1) % items.length);
-    }, 5000);
-  };
-
-  startTimer();
 }
 
 function kpiCard(label, value, delta, icon, color = "") {
@@ -973,7 +871,7 @@ function actionLabel(action) {
 }
 
 async function renderProducts(params = {}) {
-  await loadLookupData(["categories", "suppliers", "locations"]);
+  await loadLookupData(["categories", "suppliers"]);
   const data = await api(`/api/products${buildQuery({ page: params.page || 1, search: params.search, stock_status: params.stock_status, category_id: params.category_id })}`);
   const canEdit = hasPermission("products.edit");
   const canDelete = hasPermission("products.delete");
@@ -1097,10 +995,7 @@ function productForm(product = {}) {
       </div>
       <div class="field">
         <label>Local de estoque</label>
-        <select name="location_id">
-          <option value="">Sem local</option>
-          ${optionList(MovStok.state.cache.locations, product.location?.id)}
-        </select>
+        <input name="location_name" value="${escapeHtml(product.location?.name || "")}" placeholder="Ex: Prateleira 1">
       </div>
       <div class="field">
         <label>Código de barras</label>
@@ -2107,7 +2002,7 @@ function userForm(u = {}) {
         <label>Perfil</label>
         <select name="role_id">
           <option value="">Sem perfil</option>
-          ${optionList(App.cache.roles, u.role?.id, "label")}
+          ${optionList(MovStok.state.cache.roles, u.role?.id, "label")}
         </select>
       </div>
       <div class="field">
@@ -2224,7 +2119,7 @@ async function renderSettings() {
           <button class="btn sm ghost" id="new-location"><i class="fa-solid fa-plus"></i> Adicionar</button>
         </div>
         <div class="panel-body">
-          ${locationsTable(App.cache.locations)}
+          ${locationsTable(MovStok.state.cache.locations)}
         </div>
       </section>
     </div>

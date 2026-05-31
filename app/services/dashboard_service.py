@@ -73,7 +73,6 @@ class DashboardService:
             "top_products": top_products,
             "recent_activity": [a.to_dict() for a in ActivityLog.query.filter_by(company_id=cid)
                                .order_by(ActivityLog.created_at.desc()).limit(8).all()],
-            "banners": self._get_active_banners()
         }
 
     def _get_movement_history(self, days=14):
@@ -93,13 +92,6 @@ class DashboardService:
             
             history.append({"date": day.isoformat(), "entries": float(ent), "outputs": float(out)})
         return history
-
-    def _get_active_banners(self):
-        # Lógica de marketing/ERP SaaS
-        return [
-            {"id": 1, "image": "img/banners/banner1.jpg", "title": "Gestão de Estoque", "desc": "Controle total de entradas e saídas."},
-            {"id": 2, "image": "img/banners/banner2.jpg", "title": "Relatórios em Tempo Real", "desc": "Analise seu inventário com um clique."},
-        ]
 
     def _get_top_moved_products(self, limit=6):
         since = datetime.utcnow() - timedelta(days=30)

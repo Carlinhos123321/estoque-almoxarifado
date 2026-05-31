@@ -462,7 +462,7 @@ class Employee(db.Model, TimestampMixin, AuditMixin):
 
     id = Column(Integer, primary_key=True)
     company_id = Column(Integer, ForeignKey("companies.id"), index=True)
-    enrollment = Column(String(40), unique=True, nullable=False, index=True)  # matrícula
+    enrollment = Column(String(40), nullable=False, index=True)  # matrícula
     name = Column(String(160), nullable=False, index=True)
     cpf = Column(String(20), index=True)
     email = Column(String(160))
@@ -475,6 +475,10 @@ class Employee(db.Model, TimestampMixin, AuditMixin):
 
     company = relationship("Company", back_populates="employees")
     outputs = relationship("StockOutput", back_populates="employee")
+
+    __table_args__ = (
+        UniqueConstraint("company_id", "enrollment", name="uq_employee_company_enrollment"),
+    )
 
     def to_dict(self):
         return {

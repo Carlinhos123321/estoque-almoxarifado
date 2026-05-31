@@ -316,7 +316,7 @@ def employees_create():
         return _err("Nome é obrigatório.")
     cid = _company_id()
     enrollment = (data.get("enrollment") or "").strip() or _next_enrollment(cid)
-    if Employee.query.filter_by(enrollment=enrollment).first():
+    if Employee.query.filter_by(company_id=cid, enrollment=enrollment).first():
         return _err("Matrícula já existente.")
     e = Employee(
         company_id=cid, enrollment=enrollment, name=name,
@@ -477,7 +477,7 @@ def outputs_create():
 @bp.delete("/outputs/<int:oid>")
 @require_permission("stock.output", api=True)
 def outputs_delete(oid):
-    o = StockOutput.query.get_or_404(oid)
+    o = StockOutput.query.filter_by(company_id=_company_id(), id=oid).first_or_404()
     if o.status == "cancelled":
         return _err("Saída já cancelada.")
     p = o.product
@@ -751,7 +751,11 @@ def notifications_list():
 @bp.post("/notifications/<int:nid>/read")
 @login_required
 def notifications_read(nid):
-    n = Notification.query.get_or_404(nid)
+    n = (Notification.query
+         .filter_by(company_id=_company_id(), id=nid)
+         .filter(or_(Notification.user_id == current_user.id,
+                     Notification.user_id.is_(None)))
+         .first_or_404())
     if not n.read_at:
         n.read_at = datetime.utcnow()
         db.session.commit()
@@ -762,7 +766,11 @@ def notifications_read(nid):
 @login_required
 def notifications_read_all():
     cid = _company_id()
-    q = Notification.query.filter_by(company_id=cid).filter(Notification.read_at.is_(None))
+    q = (Notification.query
+         .filter_by(company_id=cid)
+         .filter(Notification.read_at.is_(None))
+         .filter(or_(Notification.user_id == current_user.id,
+                     Notification.user_id.is_(None))))
     for n in q.all():
         n.read_at = datetime.utcnow()
     db.session.commit()
@@ -872,7 +880,7 @@ def users_create():
 @bp.patch("/users/<int:uid>")
 @require_permission("users.manage", api=True)
 def users_update(uid):
-    u = User.query.get_or_404(uid)
+    u = User.query.filter_by(company_id=_company_id(), id=uid).first_or_404()
     data = request.get_json(silent=True) or {}
     for f in ("name", "phone", "status", "avatar_url"):
         if f in data:
@@ -893,7 +901,7 @@ def users_update(uid):
 def users_delete(uid):
     if uid == current_user.id:
         return _err("Você não pode desativar a si mesmo.")
-    u = User.query.get_or_404(uid)
+    u = User.query.filter_by(company_id=_company_id(), id=uid).first_or_404()
     u.status = "inactive"
     db.session.commit()
     log_activity("delete", "user", uid, f"Usuário desativado: {u.email}")
