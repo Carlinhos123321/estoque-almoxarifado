@@ -1117,10 +1117,13 @@ async function loadExcelLibrary() {
   if (window.XLSX) return true;
   return new Promise((resolve, reject) => {
     const script = document.createElement("script");
-    script.src = "https://cdn.jsdelivr.net/npm/xlsx@0.20.1/dist/xlsx.full.min.js";
+    // Versão 0.18.5 é a última estável disponível no jsDelivr/NPM
+    script.src = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
+    script.type = "text/javascript";
+    script.crossOrigin = "anonymous";
     script.onload = () => resolve(true);
     script.onerror = () => {
-      toast("Erro de Carregamento", "Não foi possível carregar a biblioteca de planilhas (XLSX) via jsDelivr.", "danger");
+      toast("Erro de Carregamento", "A biblioteca XLSX (v0.18.5) falhou ao carregar. Verifique sua conexão ou política de rede.", "danger");
       reject(new Error("CSP or Network Error"));
     };
     document.head.appendChild(script);
