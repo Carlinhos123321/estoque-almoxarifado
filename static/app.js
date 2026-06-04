@@ -1194,22 +1194,46 @@ async function openImportModal() {
         return;
       }
 
-      // Mapeamento inteligente por nome de coluna (case-insensitive)
+      // Helper de normalização: minúsculas, sem acentos, sem espaços extras
+      const normalize = (s) => String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+
+      // Mapeamento inteligente por nome de coluna
       importedData = rows.map(r => {
-        const find = (keys) => {
-          const found = Object.keys(r).find(k => keys.includes(k.toLowerCase().trim()));
-          return found ? r[found] : null;
+        const rowKeys = Object.keys(r).map(k => ({ original: k, normalized: normalize(k) }));
+        
+        const findValue = (searchKeys) => {
+          const normalizedSearch = searchKeys.map(normalize);
+          const found = rowKeys.find(rk => normalizedSearch.includes(rk.normalized));
+          return found ? r[found.original] : null;
         };
+
+        const sku = findValue(["sku", "codigo", "codigo sku"]);
+        const name = findValue(["nome", "produto", "nome produto", "item"]);
+
+        // Validação básica: Requer ao menos SKU e Nome
+        if (!sku || !name) return null;
+
+        // Tenta resolver a categoria pelo nome usando o cache do MovStok
+        const catName = findValue(["categoria"]);
+        const category = MovStok.state.cache.categories.find(c => normalize(c.name) === normalize(catName));
+
         return {
-          name: find(["nome", "produto", "nome produto"]),
-          sku: find(["sku", "código", "codigo", "código sku"]),
-          stock_quantity: find(["quantidade", "qtd", "estoque"]),
-          cost_price: find(["preço custo", "custo", "preço"]),
-          sale_price: find(["preço venda", "venda"]),
-          min_stock: find(["estoque mínimo", "mínimo", "min"]),
-          unit: find(["unidade", "un"]) || "UN"
+          sku: String(sku).trim(),
+          name: String(name).trim(),
+          stock_quantity: findValue(["quantidade", "qtd", "estoque"]) || 0,
+          unit: findValue(["unidade", "un"]) || "UN",
+          cost_price: findValue(["preço custo", "custo", "preço"]) || 0,
+          sale_price: findValue(["preço venda", "venda"]) || 0,
+          min_stock: findValue(["estoque mínimo", "mínimo", "min"]) || 0,
+          location_name: findValue(["localizacao", "localização", "local"]),
+          category_id: category ? category.id : null
         };
-      }).filter(item => item.name && item.sku); // Ignora linhas inválidas
+      }).filter(item => item !== null);
+
+      if (importedData.length === 0) {
+        toast("Importação inválida", "Nenhum produto com Código e Item válidos foi identificado.", "warning");
+        return;
+      }
 
       renderPreview();
     };
