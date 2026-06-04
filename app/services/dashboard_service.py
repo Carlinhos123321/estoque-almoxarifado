@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from sqlalchemy import func, desc
+from sqlalchemy import func, desc, or_
 from ..extensions import db
 from ..models import (
     Product, StockEntry, StockOutput, Supplier, Employee, 
@@ -37,6 +37,18 @@ class DashboardService:
             Product.stock_quantity <= 0
         ).count()
 
+        # Produtos em estoque crítico: zerados ou abaixo do mínimo
+        critical_products = Product.query.filter(
+            Product.company_id == cid,
+            Product.status == "active",
+            or_(
+                Product.stock_quantity <= Product.min_stock,
+                Product.stock_quantity <= 0
+            )
+        ).order_by(
+            Product.stock_quantity.asc()
+        ).limit(10).all()
+
         # Atividade de hoje
         now = datetime.now(timezone.utc)
         today = now.date()
@@ -50,6 +62,18 @@ class DashboardService:
             StockOutput.company_id == cid, 
             StockOutput.output_date >= start_today
         ).count()
+
+        # Resumo Mensal (Mês Atual)
+        start_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        entries_month = db.session.query(func.coalesce(func.sum(StockEntry.quantity), 0)).filter(
+            StockEntry.company_id == cid, StockEntry.entry_date >= start_month
+        ).scalar()
+        
+        outputs_month = db.session.query(func.coalesce(func.sum(StockOutput.quantity), 0)).filter(
+            StockOutput.company_id == cid, StockOutput.output_date >= start_month
+        ).scalar()
+
+        categories_count = Category.query.filter_by(company_id=cid).count()
 
         # Dados para Gráfico (14 dias)
         chart_movements = self._get_movement_history(days=14)
@@ -75,12 +99,16 @@ class DashboardService:
                 "employees": Employee.query.filter_by(company_id=cid, status="active").count(),
                 "entries_today": entries_today,
                 "outputs_today": outputs_today,
+                "entries_month": float(entries_month),
+                "outputs_month": float(outputs_month),
+                "categories_count": categories_count
             },
             "chart_movements": chart_movements,
             "categories_chart": [{"name": name, "count": count} for name, count in cat_data],
-            "top_products": top_products,
-            "recent_activity": [a.to_dict() for a in ActivityLog.query.filter_by(company_id=cid)
-                               .order_by(ActivityLog.created_at.desc()).limit(8).all()],
+            "critical_stock": [
+                {"sku": p.sku, "name": p.name, "stock": float(p.stock_quantity), "min": float(p.min_stock)} 
+                for p in critical_products
+            ]
         }
 
     def _get_movement_history(self, days=14):

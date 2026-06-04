@@ -187,6 +187,22 @@ function fmtDate(value, withTime = true) {
   return withTime ? DateTimeBR.format(date) : DateBR.format(date);
 }
 
+function animateValue(id, start, end, duration) {
+  const obj = typeof id === "string" ? document.getElementById(id) : id;
+  if (!obj) return;
+  let startTimestamp = null;
+  const step = (timestamp) => {
+    if (!startTimestamp) startTimestamp = timestamp;
+    const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+    const current = Math.floor(progress * (end - start) + start);
+    obj.innerHTML = typeof end === "number" && end % 1 !== 0 ? fmtQty(current) : current;
+    if (progress < 1) {
+      window.requestAnimationFrame(step);
+    }
+  };
+  window.requestAnimationFrame(step);
+}
+
 function initials(name) {
   return String(name || "U")
     .trim()
@@ -780,64 +796,82 @@ async function renderPage(page = pageFromPath()) {
 async function renderDashboard() {
   const data = await api("/api/dashboard");
   const kpi = data.kpi || {};
-  pageWrap().innerHTML = `
-    ${pageHeader(
-      "dashboard",
-      kpi.total_products > 0 
-        ? "Visão executiva do almoxarifado e operação logística." 
-        : "Bem-vindo! Comece cadastrando seus primeiros produtos para ativar as estatísticas do painel."
-    )}
 
-    <div class="kpi-grid">
-      ${kpiCard("Produtos", kpi.total_products, "Cadastrados no catálogo", "fa-barcode")}
-      ${kpiCard("Estoque atual", fmtQty(kpi.total_units), "Unidades totais", "fa-boxes-stacked", "green")}
-      ${kpiCard("Valor em estoque", fmtMoney(kpi.inventory_value), "Custo contábil", "fa-sack-dollar", "cyan")}
-      ${kpiCard("Alertas", Number(kpi.low_stock || 0) + Number(kpi.out_stock || 0), "Baixo ou zerado", "fa-triangle-exclamation", "amber")}
-      ${kpiCard("Entradas hoje", kpi.entries_today, "Recebimentos", "fa-truck-ramp-box", "green")}
-      ${kpiCard("Saídas hoje", kpi.outputs_today, "Requisições atendidas", "fa-dolly", "red")}
+  // Saudação Dinâmica baseada no horário local
+  const hour = new Date().getHours();
+  let greeting = "Boa noite 🌙";
+  if (hour >= 5 && hour < 12) greeting = "Bom dia 👋";
+  else if (hour >= 12 && hour < 18) greeting = "Boa tarde ☀️";
+
+  // Formatação de data completa para o cabeçalho
+  const todayFull = new Intl.DateTimeFormat('pt-BR', { 
+    dateStyle: 'full' 
+  }).format(new Date());
+
+  // KPIs consolidados com IDs para animação
+  pageWrap().innerHTML = `
+    <div class="greeting-box">
+      <h2>${greeting}, ${escapeHtml(MovStok.state.user?.name.split(' ')[0])}</h2>
+      <p>Hoje é ${escapeHtml(todayFull)}</p>
     </div>
 
-    <div class="grid-2">
+    <div class="kpi-grid">
+      ${kpiCard("Produtos", kpi.total_products, "Itens no catálogo", "fa-barcode", "", "kpi-products")}
+      ${kpiCard("Estoque Total", kpi.total_units, "Unidades em posse", "fa-boxes-stacked", "green", "kpi-units")}
+      ${kpiCard("Valor Contábil", fmtMoney(kpi.inventory_value), "Patrimônio atual", "fa-wallet", "cyan", "kpi-value")}
+      ${kpiCard("Alertas", (Number(kpi.low_stock) + Number(kpi.out_stock)), "Ações necessárias", "fa-triangle-exclamation", "amber", "kpi-alerts")}
+      ${kpiCard("Entradas (Hoje)", kpi.entries_today, "Recebidas", "fa-arrow-down-long", "green", "kpi-entries")}
+      ${kpiCard("Saídas (Hoje)", kpi.outputs_today, "Expedidas", "fa-arrow-up-long", "red", "kpi-outputs")}
+    </div>
+
+    <div class="dash-main-grid">
       <section class="panel">
-        <div class="panel-head">
-          <h3>Movimentação dos últimos 14 dias</h3>
-        </div>
+        <div class="panel-head"><h3>Fluxo de Movimentação (14 dias)</h3></div>
         <div class="panel-body">
           <div class="chart-box"><canvas id="movement-chart"></canvas></div>
         </div>
       </section>
 
-      <section class="panel">
-        <div class="panel-head">
-          <h3>Produtos mais requisitados</h3>
-        </div>
-        <div class="panel-body">
-          ${dashboardTopProducts(data.top_products || [])}
-        </div>
-      </section>
-    </div>
+      <div class="dash-row">
+        <section class="panel">
+          <div class="panel-head"><h3>⚠️ Estoque Crítico</h3></div>
+          <div class="panel-body" style="padding:0">
+            ${renderCriticalStock(data.critical_stock || [])}
+          </div>
+        </section>
 
-    <div class="grid-2">
+        <section class="panel">
+          <div class="panel-head"><h3>📊 Resumo Executivo</h3></div>
+          <div class="panel-body">
+            <div style="display:flex; flex-direction:column; gap:16px">
+              ${summaryItem("Produtos Ativos", kpi.total_products, "fa-tag")}
+              ${summaryItem("Categorias", kpi.categories_count, "fa-layer-group")}
+              <hr style="border:0; border-top:1px solid var(--border); margin:4px 0">
+              ${summaryItem("Entradas no Mês", fmtQty(kpi.entries_month), "fa-arrow-down", "text-success")}
+              ${summaryItem("Saídas no Mês", fmtQty(kpi.outputs_month), "fa-arrow-up", "text-danger")}
+              ${summaryItem("Valor Total", fmtMoney(kpi.inventory_value), "fa-wallet", "text-primary")}
+            </div>
+          </div>
+        </section>
+      </div>
+
       <section class="panel">
-        <div class="panel-head">
-          <h3>Distribuição por categoria</h3>
-        </div>
+        <div class="panel-head"><h3>Distribuição de Inventário por Categoria</h3></div>
         <div class="panel-body">
           <div class="chart-box sm"><canvas id="category-chart"></canvas></div>
-        </div>
-      </section>
-
-      <section class="panel">
-        <div class="panel-head">
-          <h3>Atividades recentes</h3>
-        </div>
-        <div class="panel-body">
-          ${activityList(data.recent_activity || [])}
         </div>
       </section>
     </div>
   `;
 
+  // Animação dos contadores
+  animateValue("kpi-products", 0, kpi.total_products, 1000);
+  animateValue("kpi-units", 0, kpi.total_units, 1000);
+  animateValue("kpi-alerts", 0, (Number(kpi.low_stock) + Number(kpi.out_stock)), 1000);
+  animateValue("kpi-entries", 0, kpi.entries_today, 1000);
+  animateValue("kpi-outputs", 0, kpi.outputs_today, 1000);
+
+  // Gráficos Reais
   const movement = data.chart_movements || [];
   renderLineChart(
     "movement-chart",
@@ -855,15 +889,50 @@ async function renderDashboard() {
 
 }
 
-function kpiCard(label, value, delta, icon, color = "") {
+function renderCriticalStock(items) {
+  if (!items || items.length === 0) {
+    return emptyState("fa-check-circle", "Tudo em ordem", "Não há produtos com estoque crítico no momento.");
+  }
+  return `
+    <table class="data-table">
+      <thead>
+        <tr><th>Item</th><th class="num">Qtd</th><th class="num">Mín</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        ${items.map(p => `
+          <tr>
+            <td><strong>${escapeHtml(p.name)}</strong><div class="text-muted mono" style="font-size:11px">${escapeHtml(p.sku)}</div></td>
+            <td class="num" style="color:var(--danger); font-weight:700">${fmtQty(p.stock)}</td>
+            <td class="num">${fmtQty(p.min)}</td>
+            <td><span class="badge ${p.stock <= 0 ? 'danger' : 'warning'}">${p.stock <= 0 ? 'Zerado' : 'Baixo'}</span></td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+function kpiCard(label, value, delta, icon, color = "", id = "") {
   return `
     <div class="kpi-card">
       <div>
         <div class="kpi-label">${escapeHtml(label)}</div>
-        <div class="kpi-value">${escapeHtml(value ?? 0)}</div>
+        <div class="kpi-value" id="${id}">${escapeHtml(value ?? 0)}</div>
         <div class="kpi-delta">${escapeHtml(delta)}</div>
       </div>
       <div class="kpi-icon ${color}"><i class="fa-solid ${icon}"></i></div>
+    </div>
+  `;
+}
+
+function summaryItem(label, value, icon, colorClass = "") {
+  return `
+    <div style="display:flex; justify-content:space-between; align-items:center; padding: 4px 0">
+      <div style="display:flex; align-items:center; gap:10px; color:var(--text-2)">
+        <i class="fa-solid ${icon} ${colorClass}" style="width:16px; text-align:center"></i>
+        <span style="font-size:13px">${escapeHtml(label)}</span>
+      </div>
+      <strong style="font-size:14px">${escapeHtml(value)}</strong>
     </div>
   `;
 }
@@ -1195,20 +1264,27 @@ async function openImportModal() {
       }
 
       // Helper de normalização: minúsculas, sem acentos, sem espaços extras
-      const normalize = (s) => String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+      const normalize = (s) => String(s || "")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .trim();
 
       // Mapeamento inteligente por nome de coluna
       importedData = rows.map(r => {
-        const rowKeys = Object.keys(r).map(k => ({ original: k, normalized: normalize(k) }));
-        
+        const rowKeys = Object.keys(r).map(k => ({ 
+          original: k, 
+          normalized: normalize(k) 
+        }));
+
         const findValue = (searchKeys) => {
           const normalizedSearch = searchKeys.map(normalize);
           const found = rowKeys.find(rk => normalizedSearch.includes(rk.normalized));
           return found ? r[found.original] : null;
         };
 
-        const sku = findValue(["sku", "codigo", "codigo sku"]);
-        const name = findValue(["nome", "produto", "nome produto", "item"]);
+        const sku = findValue(["codigo", "sku", "codigo sku", "ref"]);
+        const name = findValue(["item", "produto", "nome", "nome produto"]);
 
         // Validação básica: Requer ao menos SKU e Nome
         if (!sku || !name) return null;
