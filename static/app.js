@@ -28,41 +28,10 @@ const MovStok = {
 
   // Camada de Serviços: Abstração de I/O
   Services: {
-    async request(path, options = {}) {
-      const headers = {
-        "Accept": "application/json",
-        "X-Requested-With": "XMLHttpRequest",
-        ...(options.body ? { "Content-Type": "application/json" } : {}),
-        ...(options.headers || {}),
-      };
-
-      if (isUnsafeRequest(options.method)) {
-        headers["X-CSRF-Token"] = await getCsrfToken();
-      }
-
-      const config = {
-        credentials: "same-origin",
-        headers,
-        ...options,
-      };
-
-      if (options.body && typeof options.body !== "string") {
-        config.body = JSON.stringify(options.body);
-      }
-
-      const response = await fetch(path, config);
-      const payload = await response.json().catch(() => ({ error: "Erro de comunicação com o servidor." }));
-
-      if (!response.ok) {
-        if (response.status === 401) MovStok.Auth.logout(true);
-        if (response.status === 419) MovStok.state.security.csrfToken = null;
-        throw new Error(payload.error || "Operação falhou.");
-      }
-      return payload;
-    },
+    request: (path, options) => api(path, options),
 
     Products: {
-      list: (params) => MovStok.Services.request(`/api/products${buildQuery(params)}`),
+      list: (params) => api(`/api/products${buildQuery(params)}`),
       save: (data, id = null) => MovStok.Services.request(id ? `/api/products/${id}` : "/api/products", {
         method: id ? "PUT" : "POST",
         body: data
@@ -980,6 +949,8 @@ async function renderProducts(params = {}) {
 
   pageWrap().innerHTML = `
     ${pageHeader("produtos", "Catálogo completo de materiais, SKUs, custos e níveis mínimos.", canCreate ? `
+      <button class="btn ghost" id="download-template"><i class="fa-solid fa-file-download"></i> Modelo</button>
+      <button class="btn ghost" id="import-products"><i class="fa-solid fa-file-import"></i> Importar Planilha</button>
       <button class="btn primary" id="new-product"><i class="fa-solid fa-plus"></i> Novo produto</button>
     ` : "")}
     <div class="table-wrap">
@@ -1010,6 +981,8 @@ async function renderProducts(params = {}) {
   $("#products-stock").addEventListener("change", (event) => renderProducts({ ...params, page: 1, stock_status: event.target.value }));
   bindPagination("products", (page) => renderProducts({ ...params, page }));
   $("#new-product")?.addEventListener("click", () => openProductModal());
+  $("#import-products")?.addEventListener("click", () => openImportModal());
+  $("#download-template")?.addEventListener("click", () => downloadImportTemplate());
   bindRowActions({
     edit: (id) => openProductModal(data.items.find((item) => item.id === id)),
     delete: (id) => deleteProduct(id),
@@ -1138,6 +1111,155 @@ function productForm(product = {}) {
       </div>
     </form>
   `;
+}
+
+async function loadExcelLibrary() {
+  if (window.XLSX) return true;
+  return new Promise((resolve) => {
+    const script = document.createElement("script");
+    script.src = "https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js";
+    script.onload = () => resolve(true);
+    document.head.appendChild(script);
+  });
+}
+
+function downloadImportTemplate() {
+  const headers = ["Nome Produto", "Código SKU", "Quantidade", "Preço Custo", "Preço Venda", "Estoque Mínimo", "Unidade"];
+  const data = [
+    ["Mouse Gamer", "M001", "10", "45.00", "99.90", "5", "UN"],
+    ["Teclado RGB", "T001", "5", "80.00", "149.90", "2", "UN"]
+  ];
+  const csvContent = "\uFEFF" + [headers.join(","), ...data.map(e => e.join(","))].join("\n");
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "modelo_importacao_movstok.csv";
+  link.click();
+}
+
+async function openImportModal() {
+  await loadExcelLibrary();
+  openModal({
+    title: "Importar Produtos",
+    body: `
+      <div class="empty-state" id="import-dropzone" style="border: 2px dashed var(--border-strong); cursor: pointer; padding: 40px;">
+        <i class="fa-solid fa-cloud-arrow-up"></i>
+        <h4>Selecione ou arraste a planilha</h4>
+        <p>Suporta .xlsx, .xls e .csv</p>
+        <input type="file" id="import-file" accept=".xlsx, .xls, .csv" style="display:none">
+      </div>
+      <div id="import-preview" style="display:none; margin-top:20px"></div>
+    `,
+    footer: `
+      <button class="btn ghost" type="button" data-modal-close>Cancelar</button>
+      <button class="btn primary" id="start-import" disabled>Iniciar Importação</button>
+    `
+  });
+
+  const fileInput = $("#import-file");
+  const dropzone = $("#import-dropzone");
+  let importedData = [];
+
+  dropzone.onclick = () => fileInput.click();
+  fileInput.onchange = (e) => processFile(e.target.files[0]);
+
+  async function processFile(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(sheet); // Lê como objetos usando a primeira linha como chave
+      
+      if (rows.length === 0) {
+        toast("Planilha vazia", "Não foram encontrados dados para importar.", "warning");
+        return;
+      }
+
+      // Mapeamento inteligente por nome de coluna (case-insensitive)
+      importedData = rows.map(r => {
+        const find = (keys) => {
+          const found = Object.keys(r).find(k => keys.includes(k.toLowerCase().trim()));
+          return found ? r[found] : null;
+        };
+        return {
+          name: find(["nome", "produto", "nome produto"]),
+          sku: find(["sku", "código", "codigo", "código sku"]),
+          stock_quantity: find(["quantidade", "qtd", "estoque"]),
+          cost_price: find(["preço custo", "custo", "preço"]),
+          sale_price: find(["preço venda", "venda"]),
+          min_stock: find(["estoque mínimo", "mínimo", "min"]),
+          unit: find(["unidade", "un"]) || "UN"
+        };
+      }).filter(item => item.name && item.sku); // Ignora linhas inválidas
+
+      renderPreview();
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  function renderPreview() {
+    dropzone.style.display = "none";
+    const preview = $("#import-preview");
+    preview.style.display = "block";
+    preview.innerHTML = `
+      <p class="text-muted" style="margin-bottom:10px">Encontrados <strong>${importedData.length}</strong> produtos para importar.</p>
+      <div class="table-wrap" style="max-height: 300px">
+        <table class="data-table">
+          <thead><tr><th>Produto</th><th>SKU</th><th>Qtd</th><th>Preço</th></tr></thead>
+          <tbody>
+            ${importedData.slice(0, 5).map(r => `<tr><td>${r.name}</td><td>${r.sku}</td><td>${r.stock_quantity}</td><td>${r.sale_price}</td></tr>`).join('')}
+          </tbody>
+        </table>
+        ${importedData.length > 5 ? `<p class="text-center text-muted" style="padding:10px">...e mais ${importedData.length - 5} itens.</p>` : ''}
+      </div>
+      <div id="import-progress" style="display:none; margin-top:15px">
+        <div class="stock-bar" style="width:100%; height:10px"><span id="progress-bar" style="width:0%"></span></div>
+        <small id="progress-text" class="text-muted"></small>
+      </div>
+    `;
+    $("#start-import").disabled = false;
+  }
+
+  $("#start-import").onclick = async () => {
+    const btn = $("#start-import");
+    const progressDiv = $("#import-progress");
+    const bar = $("#progress-bar");
+    const txt = $("#progress-text");
+    
+    btn.disabled = true;
+    progressDiv.style.display = "block";
+    
+    let success = 0;
+    let errors = 0;
+
+    for (let i = 0; i < importedData.length; i++) {
+      try {
+        const item = importedData[i];
+        if (!item.name || !item.sku) throw new Error("Campos obrigatórios ausentes");
+        
+        await api("/api/products", { method: "POST", body: item });
+        success++;
+      } catch (err) {
+        errors++;
+        console.error("Erro na linha", i, err);
+      }
+      
+      const pct = Math.round(((i + 1) / importedData.length) * 100);
+      bar.style.width = pct + "%";
+      txt.textContent = `Processando: ${i + 1}/${importedData.length}...`;
+    }
+
+    toast(
+      "Importação concluída", 
+      `${success} produtos importados com sucesso. ${errors} falhas.`,
+      errors > 0 ? "warning" : "success"
+    );
+    
+    closeModal();
+    renderProducts();
+  };
 }
 
 function openProductModal(product = null) {

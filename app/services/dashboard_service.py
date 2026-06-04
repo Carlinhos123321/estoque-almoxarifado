@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy import func, desc
 from ..extensions import db
 from ..models import (
@@ -38,9 +38,9 @@ class DashboardService:
         ).count()
 
         # Atividade de hoje
-        today = datetime.utcnow().date()
+        now = datetime.now(timezone.utc)
+        today = now.date()
         start_today = datetime.combine(today, datetime.min.time())
-        
         entries_today = StockEntry.query.filter(
             StockEntry.company_id == cid, 
             StockEntry.entry_date >= start_today
@@ -54,6 +54,13 @@ class DashboardService:
         # Dados para Gráfico (14 dias)
         chart_movements = self._get_movement_history(days=14)
         
+        # Distribuição por Categoria (Real)
+        cat_data = db.session.query(
+            Category.name, func.count(Product.id)
+        ).join(Product, Product.category_id == Category.id)\
+         .filter(Category.company_id == cid)\
+         .group_by(Category.id).all()
+
         # Top Produtos (Ranking)
         top_products = self._get_top_moved_products(limit=6)
 
@@ -70,6 +77,7 @@ class DashboardService:
                 "outputs_today": outputs_today,
             },
             "chart_movements": chart_movements,
+            "categories_chart": [{"name": name, "count": count} for name, count in cat_data],
             "top_products": top_products,
             "recent_activity": [a.to_dict() for a in ActivityLog.query.filter_by(company_id=cid)
                                .order_by(ActivityLog.created_at.desc()).limit(8).all()],
@@ -77,10 +85,11 @@ class DashboardService:
 
     def _get_movement_history(self, days=14):
         cid = self.company_id
-        start = datetime.utcnow() - timedelta(days=days-1)
+        now = datetime.now(timezone.utc)
+        start = (now - timedelta(days=days-1)).date()
         history = []
         for i in range(days):
-            day = (start + timedelta(days=i)).date()
+            day = start + timedelta(days=i)
             d_start = datetime.combine(day, datetime.min.time())
             d_end = d_start + timedelta(days=1)
             
@@ -94,7 +103,7 @@ class DashboardService:
         return history
 
     def _get_top_moved_products(self, limit=6):
-        since = datetime.utcnow() - timedelta(days=30)
+        since = datetime.now(timezone.utc) - timedelta(days=30)
         res = (db.session.query(Product, func.sum(StockOutput.quantity).label("qty"))
                .join(StockOutput, StockOutput.product_id == Product.id)
                .filter(Product.company_id == self.company_id, StockOutput.output_date >= since)
