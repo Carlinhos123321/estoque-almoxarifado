@@ -1117,10 +1117,10 @@ async function loadExcelLibrary() {
   if (window.XLSX) return true;
   return new Promise((resolve, reject) => {
     const script = document.createElement("script");
-    script.src = "https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js";
+    script.src = "https://cdn.jsdelivr.net/npm/xlsx@0.20.1/dist/xlsx.full.min.js";
     script.onload = () => resolve(true);
     script.onerror = () => {
-      toast("Erro de Segurança", "A biblioteca de planilhas foi bloqueada pela política de segurança ou rede.", "danger");
+      toast("Erro de Carregamento", "Não foi possível carregar a biblioteca de planilhas (XLSX) via jsDelivr.", "danger");
       reject(new Error("CSP or Network Error"));
     };
     document.head.appendChild(script);
@@ -1171,6 +1171,14 @@ async function openImportModal() {
 
   async function processFile(file) {
     if (!file) return;
+    
+    // Garante que a lib está carregada antes de tentar ler o arquivo
+    try {
+      await loadExcelLibrary();
+    } catch (e) {
+      return; // O erro já foi disparado pelo toast no loadExcelLibrary
+    }
+
     const reader = new FileReader();
     reader.onload = (e) => {
       const data = new Uint8Array(e.target.result);
