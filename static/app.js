@@ -1115,10 +1115,14 @@ function productForm(product = {}) {
 
 async function loadExcelLibrary() {
   if (window.XLSX) return true;
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const script = document.createElement("script");
-    script.src = "https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js";
+    script.src = "https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js";
     script.onload = () => resolve(true);
+    script.onerror = () => {
+      toast("Erro de Segurança", "A biblioteca de planilhas foi bloqueada pela política de segurança ou rede.", "danger");
+      reject(new Error("CSP or Network Error"));
+    };
     document.head.appendChild(script);
   });
 }
@@ -1138,7 +1142,6 @@ function downloadImportTemplate() {
 }
 
 async function openImportModal() {
-  await loadExcelLibrary();
   openModal({
     title: "Importar Produtos",
     body: `
@@ -1155,6 +1158,9 @@ async function openImportModal() {
       <button class="btn primary" id="start-import" disabled>Iniciar Importação</button>
     `
   });
+
+  // Carrega a biblioteca em segundo plano sem travar a abertura do modal
+  loadExcelLibrary().catch(() => closeModal());
 
   const fileInput = $("#import-file");
   const dropzone = $("#import-dropzone");
