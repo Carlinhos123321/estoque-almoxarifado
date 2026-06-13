@@ -842,7 +842,7 @@ def _resolve_role(role_id):
         return None
     role = db.session.get(Role, int(role_id))
     if not role:
-        raise ValueError("Perfil informado nÃ£o existe.")
+        raise ValueError("Perfil informado não existe.")
     if role.name == "super_admin" and not current_user.is_super_admin:
         raise ValueError("Apenas Super Admin pode atribuir o perfil Super Admin.")
     return role

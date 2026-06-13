@@ -17,53 +17,141 @@
 <section id="auth" class="auth-screen">
   <div class="auth-layout">
     <aside class="auth-left">
-      <header class="brand">
-        <div class="brand-logo">MV</div>
+      <header class="auth-brand">
+        <div class="auth-brand-mark">AX</div>
         <div>
-          <h1>MovStok</h1>
-          <span>ERP &amp; Gestão de Almoxarifado</span>
+          <strong>Axium</strong>
+          <span>Warehouse Management System</span>
         </div>
       </header>
 
-      <div class="auth-content">
-        <div class="welcome">
-          <h2>Acesse sua conta</h2>
-          <p>Plataforma corporativa de gestão de estoque, movimentações,
-             fornecedores, equipes e relatórios operacionais.</p>
-        </div>
+      <div class="warehouse-visual" aria-hidden="true">
+        <svg class="warehouse-lines" viewBox="0 0 760 520" role="img">
+          <defs>
+            <linearGradient id="axium-teal" x1="0" x2="1">
+              <stop offset="0" stop-color="#14B8A6"/>
+              <stop offset="1" stop-color="#06B6D4"/>
+            </linearGradient>
+          </defs>
+          <path class="dash-line line-a" d="M160 128 C245 88, 328 100, 410 154"/>
+          <path class="dash-line line-b" d="M455 180 C550 222, 604 284, 628 368"/>
+          <path class="dash-line line-c" d="M148 390 C248 430, 372 410, 492 348"/>
+          <g class="iso-base">
+            <path d="M128 354 L370 224 L644 354 L400 488 Z"/>
+            <path d="M128 354 L400 488 L400 515 L128 380 Z"/>
+            <path d="M400 488 L644 354 L644 380 L400 515 Z"/>
+          </g>
+          <g class="rack rack-left">
+            <path d="M198 320 L198 176 L308 114 L308 258 Z"/>
+            <path d="M224 306 L224 190"/>
+            <path d="M252 292 L252 174"/>
+            <path d="M280 276 L280 160"/>
+            <path d="M198 224 L308 162"/>
+            <path d="M198 272 L308 210"/>
+            <rect x="210" y="216" width="28" height="22" rx="2"/>
+            <rect x="246" y="196" width="28" height="22" rx="2"/>
+            <rect x="248" y="248" width="30" height="22" rx="2"/>
+          </g>
+          <g class="rack rack-right">
+            <path d="M420 274 L420 132 L556 198 L556 340 Z"/>
+            <path d="M450 290 L450 148"/>
+            <path d="M486 308 L486 166"/>
+            <path d="M522 324 L522 182"/>
+            <path d="M420 180 L556 246"/>
+            <path d="M420 226 L556 292"/>
+            <rect x="436" y="194" width="32" height="22" rx="2"/>
+            <rect x="476" y="214" width="32" height="22" rx="2"/>
+            <rect x="508" y="272" width="32" height="22" rx="2"/>
+          </g>
+          <g class="pallets">
+            <path d="M288 368 L360 330 L430 365 L356 406 Z"/>
+            <path d="M306 336 L358 308 L410 334 L356 364 Z"/>
+            <path d="M306 336 L356 364 L356 392 L306 364 Z"/>
+            <path d="M356 364 L410 334 L410 362 L356 392 Z"/>
+            <path d="M454 392 L522 354 L582 384 L512 424 Z"/>
+            <path d="M470 360 L520 332 L568 356 L518 386 Z"/>
+          </g>
+          <g class="forklift">
+            <path d="M174 396 L238 362 L282 384 L216 420 Z"/>
+            <path d="M214 354 L248 336 L278 384 L238 362 Z"/>
+            <path d="M274 382 L312 362"/>
+            <path d="M302 368 L302 316"/>
+            <path d="M316 360 L316 306"/>
+            <circle cx="214" cy="421" r="13"/>
+            <circle cx="268" cy="392" r="10"/>
+          </g>
+        </svg>
 
-        <form class="login-form" id="login-form" autocomplete="on">
-          <div class="field">
-            <label>E-mail corporativo</label>
-            <input type="email" id="login-email" required placeholder="usuario@empresa.com"/>
-          </div>
-          <div class="field">
-            <label>Senha</label>
-            <input type="password" id="login-password" required placeholder="••••••••"/>
-          </div>
-          <label class="checkbox-inline">
-            <input type="checkbox" id="login-show-password"/> Ver senha
-          </label>
-          <button type="button" class="forgot-btn" id="forgot-password">
-            Esqueci minha senha
-          </button>
-          <label class="checkbox-inline">
-            <input type="checkbox" id="login-remember"/> Manter conectado
-          </label>
-          <div class="auth-error" id="login-error"></div>
-          <button type="submit" class="login-btn">
-            <i class="fa-solid fa-right-to-bracket"></i> Entrar no sistema
-          </button>
-        </form>
-
+        <article class="metric-card card-stock">
+          <span>Giro de estoque</span>
+          <div class="mini-bars"><i></i><i></i><i></i><i></i><i></i></div>
+        </article>
+        <article class="metric-card card-accuracy">
+          <div class="gauge"><span>98%</span></div>
+          <strong>acuracidade</strong>
+        </article>
+        <article class="metric-card card-skus">
+          <strong>12.847</strong>
+          <span>SKUs ativos</span>
+        </article>
       </div>
 
-      <footer class="auth-footer">
-        © <span id="auth-year"></span> MovStok · v1.0 · Todos os direitos reservados
+      <footer class="auth-trust">
+        <span>Confiado por +500 empresas</span>
+        <div class="trust-logos">
+          <i>North</i>
+          <i>Vértice</i>
+          <i>Atlas</i>
+        </div>
       </footer>
     </aside>
 
     <aside class="auth-right">
+      <div class="auth-content">
+        <div class="auth-accent"></div>
+        <div class="welcome">
+          <h2>Bem-vindo</h2>
+          <p>Faça login para gerenciar seu almoxarifado</p>
+        </div>
+        <form class="login-form" id="login-form" autocomplete="on">
+          <div class="field auth-field">
+            <label>E-mail corporativo</label>
+            <div class="input-shell">
+              <i class="fa-regular fa-envelope"></i>
+              <input type="email" id="login-email" required placeholder="usuario@empresa.com"/>
+            </div>
+          </div>
+          <div class="field auth-field">
+            <label>Senha</label>
+            <div class="input-shell">
+              <i class="fa-solid fa-lock"></i>
+              <input type="password" id="login-password" required placeholder="••••••••"/>
+              <label class="password-eye" for="login-show-password" title="Ver senha">
+                <input type="checkbox" id="login-show-password"/>
+                <span><i class="fa-regular fa-eye"></i></span>
+              </label>
+            </div>
+          </div>
+          <div class="login-options">
+            <label class="checkbox-inline">
+              <input type="checkbox" id="login-remember"/> Manter conectado
+            </label>
+            <button type="button" class="forgot-btn" id="forgot-password">
+              Recuperar acesso
+            </button>
+          </div>
+          <div class="auth-error" id="login-error"></div>
+          <button type="submit" class="login-btn">
+            <span class="btn-label">Entrar no painel <i class="fa-solid fa-arrow-right"></i></span>
+          </button>
+          <div class="auth-divider"><span>Outras opções</span></div>
+        </form>
+
+        <footer class="auth-footer">
+          <span>© 2026 Axium · Política de Privacidade · Suporte 24/7</span>
+          <strong><i></i> Sistemas operacionais</strong>
+        </footer>
+      </div>
     </aside>
   </div>
 </section>

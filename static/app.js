@@ -2220,19 +2220,19 @@ async function renderReports() {
 async function renderFinance() {
   const summary = await api("/api/finance/summary");
   pageWrap().innerHTML = `
-    ${pageHeader("financeiro", "Valores operacionais do estoque e movimentacoes financeiras.")}
+    ${pageHeader("financeiro", "Valores operacionais do estoque e movimentações financeiras.")}
     <div class="kpi-grid">
       ${kpiCard("Valor em estoque", fmtMoney(summary.stock_value), "Custo atual dos saldos", "fa-boxes-stacked", "blue")}
       ${kpiCard("Compras 30 dias", fmtMoney(summary.entries_value_30d), "Entradas confirmadas", "fa-file-invoice-dollar", "green")}
-      ${kpiCard("Saidas 30 dias", fmtMoney(summary.outputs_value_30d), "Saidas confirmadas", "fa-receipt", "amber")}
+      ${kpiCard("Saídas 30 dias", fmtMoney(summary.outputs_value_30d), "Saídas confirmadas", "fa-receipt", "amber")}
     </div>
     <section class="panel">
       <div class="panel-head"><h3>Controle financeiro</h3></div>
       <div class="panel-body">
         <table class="data-table">
           <tbody>
-            <tr><td><strong>Permissao ativa</strong><div class="text-muted">Somente perfis com finance.view acessam esta tela.</div></td><td>${statusBadge("ready", { ready: { label: "Protegido", cls: "info" } })}</td></tr>
-            <tr><td><strong>Gestao financeira</strong><div class="text-muted">Use finance.manage para liberar futuras acoes de edicao financeira.</div></td><td>${hasPermission("finance.manage") ? statusBadge("ready", { ready: { label: "Liberada", cls: "success" } }) : statusBadge("locked", { locked: { label: "Restrita", cls: "neutral" } })}</td></tr>
+            <tr><td><strong>Permissão ativa</strong><div class="text-muted">Somente perfis com finance.view acessam esta tela.</div></td><td>${statusBadge("ready", { ready: { label: "Protegido", cls: "info" } })}</td></tr>
+            <tr><td><strong>Gestão financeira</strong><div class="text-muted">Use finance.manage para liberar futuras ações de edição financeira.</div></td><td>${hasPermission("finance.manage") ? statusBadge("ready", { ready: { label: "Liberada", cls: "success" } }) : statusBadge("locked", { locked: { label: "Restrita", cls: "neutral" } })}</td></tr>
           </tbody>
         </table>
       </div>
@@ -2243,20 +2243,20 @@ async function renderFinance() {
 async function renderAdministration() {
   const data = await api("/api/admin/system");
   pageWrap().innerHTML = `
-    ${pageHeader("administracao", "Administracao do sistema, seguranca e governanca de acesso.")}
+    ${pageHeader("administracao", "Administração do sistema, segurança e governança de acesso.")}
     <div class="kpi-grid">
-      ${kpiCard("Usuarios", data.users, "Nesta empresa", "fa-users", "blue")}
+      ${kpiCard("Usuários", data.users, "Nesta empresa", "fa-users", "blue")}
       ${kpiCard("Perfis", data.roles, "Roles cadastradas", "fa-user-shield", "cyan")}
-      ${kpiCard("Permissoes", data.permissions, "Codigos RBAC", "fa-key", "green")}
+      ${kpiCard("Permissões", data.permissions, "Códigos RBAC", "fa-key", "green")}
       ${kpiCard("Auditoria", data.activities, "Eventos registrados", "fa-clipboard-list", "amber")}
     </div>
     <section class="panel">
-      <div class="panel-head"><h3>Acoes administrativas</h3></div>
+      <div class="panel-head"><h3>Ações administrativas</h3></div>
       <div class="panel-body">
         <table class="data-table">
           <tbody>
-            <tr><td><strong>Gerenciar usuarios</strong><div class="text-muted">Criar, editar, desativar e alterar perfis.</div></td><td class="actions"><button class="btn sm ghost" id="admin-users"><i class="fa-solid fa-user-shield"></i> Abrir</button></td></tr>
-            <tr><td><strong>Auditoria</strong><div class="text-muted">Acompanhar log de acoes do sistema.</div></td><td class="actions"><button class="btn sm ghost" id="admin-activities"><i class="fa-solid fa-clipboard-list"></i> Abrir</button></td></tr>
+            <tr><td><strong>Gerenciar usuários</strong><div class="text-muted">Criar, editar, desativar e alterar perfis.</div></td><td class="actions"><button class="btn sm ghost" id="admin-users"><i class="fa-solid fa-user-shield"></i> Abrir</button></td></tr>
+            <tr><td><strong>Auditoria</strong><div class="text-muted">Acompanhar log de ações do sistema.</div></td><td class="actions"><button class="btn sm ghost" id="admin-activities"><i class="fa-solid fa-clipboard-list"></i> Abrir</button></td></tr>
           </tbody>
         </table>
       </div>
@@ -2396,7 +2396,7 @@ function userForm(u = {}) {
         </select>
       </div>
       <div class="field full">
-        <label>PermissÃµes do perfil</label>
+        <label>Permissões do perfil</label>
         <div id="role-permission-preview" style="min-height:42px;border:1px solid var(--border-strong);border-radius:var(--radius);padding:8px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;background:var(--panel-2)"></div>
       </div>
       <div class="field">
@@ -2417,7 +2417,7 @@ function userForm(u = {}) {
 
 function rolePermissionPreview(roleId) {
   const role = MovStok.state.cache.roles.find((item) => Number(item.id) === Number(roleId));
-  if (!role) return `<span class="text-muted">Selecione um perfil para aplicar permissÃµes.</span>`;
+  if (!role) return `<span class="text-muted">Selecione um perfil para aplicar permissões.</span>`;
   if (["admin", "super_admin"].includes(role.name)) {
     return `<span class="badge success">Acesso total</span>`;
   }
@@ -2427,7 +2427,7 @@ function rolePermissionPreview(roleId) {
   });
   return labels.length
     ? labels.map((label) => `<span class="badge info">${escapeHtml(label)}</span>`).join("")
-    : `<span class="badge neutral">Sem permissÃµes</span>`;
+    : `<span class="badge neutral">Sem permissões</span>`;
 }
 
 function openUserModal(user = null) {
