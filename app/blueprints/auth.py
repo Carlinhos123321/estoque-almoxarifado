@@ -66,6 +66,7 @@ def api_register():
     name = (data.get("name") or "").strip()[:100]
     company_name = (data.get("company_name") or "").strip()[:100]
     email = (data.get("email") or "").strip().lower()[:120]
+    phone = (data.get("phone") or "").strip()[:20]
     password = data.get("password") or ""
 
     # Proteção Anti-Spam: Limita cadastros por IP (max 3 a cada 10 minutos)
@@ -121,6 +122,7 @@ def api_register():
         email=email,
         company_id=company.id,
         role_id=admin_role.id,
+        phone=phone,
         status="active"
     )
     user.set_password(password)
@@ -173,6 +175,121 @@ def api_forgot_password():
     log_activity("password_reset_request", "user", user.id, f"Recuperação de senha solicitada para {user.email}")
 
     return jsonify(response)
+
+
+@bp.post("/api/auth/reset-password")
+@rate_limit(limit=3, window_seconds=15 * 60, key_prefix="reset-password")
+def api_reset_password_token():
+    """Valida o token e define a nova senha."""
+    data = request.get_json(silent=True) or {}
+    token = data.get("token")
+    new_password = data.get("password")
+
+    if not token or not new_password or len(new_password) < 6:
+        return jsonify({"error": "Dados inválidos ou senha muito curta (mín. 6 caracteres)."}), 400
+
+    # Busca o token válido (não expirado e não usado)
+    reset_record = PasswordResetToken.query.filter(
+        PasswordResetToken.expires_at > datetime.utcnow(),
+        PasswordResetToken.used_at.is_(None)
+    ).all()
+
+    # Verifica o hash do token (assumindo que o model possui check_token)
+    target_reset = next((r for r in reset_record if r.check_token(token)), None)
+
+    if not target_reset:
+        return jsonify({"error": "Token de recuperação inválido ou expirado."}), 400
+
+    user = User.query.get(target_reset.user_id)
+    user.set_password(new_password)
+    target_reset.used_at = datetime.utcnow()
+    db.session.commit()
+    return jsonify({"ok": True, "message": "Senha alterada com sucesso!"})
+
+
+@bp.get("/api/users")
+@login_required
+def api_list_users():
+    """Lista usuários da empresa (ou todos se super_admin)."""
+    if not current_user.has_permission("users.view") and current_user.role.name != "super_admin":
+        return jsonify({"error": "Acesso negado."}), 403
+    
+    search = request.args.get("search", "").strip()
+    query = User.query
+    
+    if current_user.role.name != "super_admin":
+        query = query.filter_by(company_id=current_user.company_id)
+    
+    if search:
+        query = query.filter(User.name.ilike(f"%{search}%") | User.email.ilike(f"%{search}%"))
+        
+    users = query.order_by(User.name).all()
+    return jsonify({"items": [u.to_dict() for u in users]})
+
+
+@bp.post("/api/users")
+@login_required
+def api_create_user():
+    if not current_user.has_permission("users.manage"):
+        return jsonify({"error": "Acesso negado."}), 403
+        
+    data = request.get_json() or {}
+    email = data.get("email", "").strip().lower()
+    
+    if User.query.filter_by(email=email).first():
+        return jsonify({"error": "E-mail já cadastrado."}), 400
+        
+    user = User(
+        name=data.get("name"),
+        email=email,
+        phone=data.get("phone"),
+        company_id=current_user.company_id,
+        role_id=data.get("role_id"),
+        status=data.get("status", "active")
+    )
+    user.set_password(data.get("password"))
+    db.session.add(user)
+    db.session.commit()
+    log_activity("create", "user", user.id, f"Usuário criado: {user.email}")
+    return jsonify({"ok": True, "user": user.to_dict()})
+
+
+@bp.put("/api/users/<int:user_id>")
+@login_required
+def api_update_user(user_id):
+    if not current_user.has_permission("users.manage"):
+        return jsonify({"error": "Acesso negado."}), 403
+        
+    user = User.query.get_or_404(user_id)
+    if current_user.role.name != "super_admin" and user.company_id != current_user.company_id:
+        return jsonify({"error": "Não autorizado."}), 403
+        
+    data = request.get_json() or {}
+    user.name = data.get("name", user.name)
+    user.phone = data.get("phone", user.phone)
+    user.role_id = data.get("role_id", user.role_id)
+    user.status = data.get("status", user.status)
+    
+    if data.get("password"):
+        user.set_password(data.get("password"))
+        
+    db.session.commit()
+    log_activity("update", "user", user.id, f"Usuário atualizado: {user.email}")
+    return jsonify({"ok": True})
+
+
+@bp.get("/api/roles")
+@login_required
+def api_list_roles():
+    roles = Role.query.order_by(Role.label).all()
+    return jsonify({"items": [r.to_dict() for r in roles]})
+
+
+@bp.get("/api/permissions")
+@login_required
+def api_list_permissions():
+    perms = Permission.query.order_by(Permission.label).all()
+    return jsonify({"items": [{"code": p.code, "label": p.label} for p in perms]})
 
 
 @bp.get("/api/auth/me")

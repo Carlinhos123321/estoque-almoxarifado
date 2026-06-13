@@ -2698,11 +2698,21 @@ function openRegisterModal() {
           <input type="email" name="email" required placeholder="seu@email.com"/>
         </div>
         <div class="field full">
+          <label>Telefone</label>
+          <input name="phone" placeholder="(00) 00000-0000"/>
+        </div>
+        <div class="field full">
           <label>Senha</label>
           <input type="password" name="password" required minlength="6" placeholder="Mínimo 6 caracteres"/>
         </div>
+        <div class="field full">
+          <label>Confirmar Senha</label>
+          <input type="password" name="confirm_password" required minlength="6" placeholder="Repita sua senha"/>
+        </div>
         <div class="form-message full" id="register-feedback" role="status"></div>
       </form>
+      <p class="text-muted" style="font-size: 12px; margin-top: 15px">
+        Ao criar conta, você concorda com nossos <a href="javascript:MovStok.UI.showTerms()">Termos de Uso</a>.</p>
     `,
     footer: `
       <button class="btn ghost" type="button" data-modal-close>Cancelar</button>
@@ -2718,6 +2728,11 @@ function openRegisterModal() {
     const feedback = $("#register-feedback");
     const formData = getFormData(event.currentTarget);
 
+    if (formData.password !== formData.confirm_password) {
+      feedback.className = "form-message full error";
+      return feedback.textContent = "As senhas não conferem.";
+    }
+
     // UX: Limpeza e Normalização
     formData.name = formData.name?.trim();
     formData.company_name = formData.company_name?.trim();
@@ -2727,7 +2742,7 @@ function openRegisterModal() {
     feedback.className = "form-message full";
     feedback.textContent = "";
     button.disabled = true;
-    button.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Criando conta...`;
+    button.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Criando conta...`;
 
     try {
       await api("/api/auth/register", { method: "POST", body: formData });
@@ -2775,7 +2790,7 @@ function openForgotPasswordModal() {
     feedback.className = "form-message full";
     feedback.textContent = "";
     button.disabled = true;
-    button.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Enviando`;
+    button.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Enviando...`;
     try {
       const data = await api("/api/auth/forgot-password", {
         method: "POST",
@@ -2790,6 +2805,54 @@ function openForgotPasswordModal() {
     } finally {
       button.disabled = false;
       button.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Enviar instruções`;
+    }
+  });
+}
+
+function openResetPasswordModal(token) {
+  openModal({
+    title: "Definir nova senha",
+    body: `
+      <form id="reset-p-form" class="form-grid one">
+        <input type="hidden" name="token" value="${escapeHtml(token)}"/>
+        <div class="field full">
+          <label>Nova Senha</label>
+          <input type="password" name="password" required minlength="6" placeholder="Mínimo 6 caracteres"/>
+        </div>
+        <div class="field full">
+          <label>Confirmar Nova Senha</label>
+          <input type="password" name="confirm_password" required minlength="6" placeholder="Repita a nova senha"/>
+        </div>
+        <div class="form-message full" id="reset-feedback"></div>
+      </form>
+    `,
+    footer: `<button class="btn primary" type="submit" form="reset-p-form" id="reset-submit">Alterar Senha</button>`
+  });
+
+  $("#reset-p-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = $("#reset-submit");
+    const fb = $("#reset-feedback");
+    const data = getFormData(e.currentTarget);
+
+    if (data.password !== data.confirm_password) {
+      fb.className = "form-message full error";
+      return fb.textContent = "As senhas não conferem.";
+    }
+
+    btn.disabled = true;
+    btn.textContent = "Processando...";
+    
+    try {
+      await api("/api/auth/reset-password", { method: "POST", body: data });
+      toast("Sucesso", "Sua senha foi atualizada. Agora você pode entrar.");
+      closeModal();
+      history.replaceState({}, "", "/login"); // Limpa o token da URL
+    } catch (err) {
+      fb.className = "form-message full error";
+      fb.textContent = err.message;
+      btn.disabled = false;
+      btn.textContent = "Alterar Senha";
     }
   });
 }
@@ -2843,10 +2906,14 @@ function bindShellEvents() {
 
   $("#login-form").addEventListener("submit", async (event) => {
     event.preventDefault();
-    const button = event.currentTarget.querySelector("button[type='submit']");
+    const button = event.currentTarget.querySelector(".login-btn");
+    const btnLabel = button.querySelector(".btn-label");
     const error = $("#login-error");
     error.textContent = "";
     button.disabled = true;
+    const originalLabel = btnLabel.innerHTML;
+    btnLabel.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Autenticando...`;
+
     try {
       const data = await api("/api/auth/login", {
         method: "POST",
@@ -2862,6 +2929,7 @@ function bindShellEvents() {
       toast("Bem-vindo", "Sessão iniciada com sucesso.");
     } catch (err) {
       error.textContent = err.message;
+      btnLabel.innerHTML = originalLabel;
     } finally {
       button.disabled = false;
     }
@@ -2993,9 +3061,58 @@ function bindShellEvents() {
   window.addEventListener("popstate", () => renderPage(pageFromPath()));
 }
 
+MovStok.UI.showHelp = () => {
+  openModal({
+    title: "Central de Ajuda",
+    body: `<p>Para suporte rápido, utilize o atalho <strong>Ctrl + K</strong> para pesquisar produtos ou acesse o módulo de <strong>Atividades</strong> para auditoria.</p>`,
+    footer: `<button class="btn primary" data-modal-close>Entendido</button>`
+  });
+};
+
+MovStok.UI.showSupport = () => {
+  openModal({
+    title: "Contato com Suporte",
+    body: `<p>E-mail: suporte@movstok.com.br<br>WhatsApp: (11) 99999-9999<br>Atendimento de Segunda a Sexta, das 08h às 18h.</p>`,
+    footer: `<button class="btn primary" data-modal-close>Fechar</button>`
+  });
+};
+
+MovStok.UI.showTerms = () => {
+  openModal({
+    title: "Termos de Uso",
+    body: `<div style="font-size:13px"><p>O MovStok ERP é uma ferramenta de gestão. O usuário é responsável pela veracidade dos dados inseridos e pela segurança de sua senha.</p></div>`,
+    footer: `<button class="btn primary" data-modal-close>Fechar</button>`
+  });
+};
+
+MovStok.UI.showPrivacy = () => {
+  openModal({
+    title: "Política de Privacidade",
+    body: `<div style="font-size:13px"><p>Seus dados são criptografados e não são compartilhados com terceiros. Utilizamos cookies apenas para manter sua sessão ativa.</p></div>`,
+    footer: `<button class="btn primary" data-modal-close>Fechar</button>`
+  });
+};
+
 async function boot() {
+  // UX: Atualiza o ano no rodapé automaticamente
   $("#auth-year").textContent = new Date().getFullYear();
+  
   bindShellEvents();
+
+  // Institucional: Bind de links do rodapé e login
+  $("#btn-help")?.addEventListener("click", MovStok.UI.showHelp);
+  $("#btn-support")?.addEventListener("click", MovStok.UI.showSupport);
+  $("#btn-terms")?.addEventListener("click", MovStok.UI.showTerms);
+  $("#btn-privacy")?.addEventListener("click", MovStok.UI.showPrivacy);
+
+  // Recuperação de Senha: Checa se há um token de reset na URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const resetToken = urlParams.get('reset_token');
+  if (resetToken) {
+    setTimeout(() => openResetPasswordModal(resetToken), 500);
+    return; // Aguarda o reset antes de tentar logar
+  }
+
   try {
     if (await checkSession()) {
       navigate(pageFromPath(), true);
