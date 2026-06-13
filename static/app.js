@@ -2869,7 +2869,19 @@ function bindShellEvents() {
 
   $("#forgot-password")?.addEventListener("click", openForgotPasswordModal);
 
-  // Injetar link de registro dinamicamente na tela de login
+  const optionsToggle = $("#login-options-toggle");
+  const optionsPanel = $("#login-options-panel");
+  if (optionsToggle && optionsPanel) {
+    optionsToggle.addEventListener("click", () => {
+      const isOpen = optionsToggle.getAttribute("aria-expanded") === "true";
+      optionsToggle.setAttribute("aria-expanded", String(!isOpen));
+      optionsPanel.hidden = isOpen;
+    });
+  }
+
+  $("#register-link")?.addEventListener("click", openRegisterModal);
+
+  // Fallback para telas antigas que ainda não tenham o botão no HTML.
   const forgotBtn = $("#forgot-password");
   if (forgotBtn && !$("#register-link")) {
     forgotBtn.insertAdjacentHTML('afterend', `

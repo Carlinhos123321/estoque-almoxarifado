@@ -18,9 +18,9 @@
   <div class="auth-layout">
     <aside class="auth-left">
       <header class="auth-brand">
-        <div class="auth-brand-mark">AX</div>
+        <div class="auth-brand-mark">MV</div>
         <div>
-          <strong>Axium</strong>
+          <strong>MovStok</strong>
           <span>Warehouse Management System</span>
         </div>
       </header>
@@ -28,7 +28,7 @@
       <div class="warehouse-visual" aria-hidden="true">
         <svg class="warehouse-lines" viewBox="0 0 760 520" role="img">
           <defs>
-            <linearGradient id="axium-teal" x1="0" x2="1">
+            <linearGradient id="movstok-teal" x1="0" x2="1">
               <stop offset="0" stop-color="#14B8A6"/>
               <stop offset="1" stop-color="#06B6D4"/>
             </linearGradient>
@@ -95,15 +95,6 @@
           <span>SKUs ativos</span>
         </article>
       </div>
-
-      <footer class="auth-trust">
-        <span>Confiado por +500 empresas</span>
-        <div class="trust-logos">
-          <i>North</i>
-          <i>Vértice</i>
-          <i>Atlas</i>
-        </div>
-      </footer>
     </aside>
 
     <aside class="auth-right">
@@ -144,11 +135,22 @@
           <button type="submit" class="login-btn">
             <span class="btn-label">Entrar no painel <i class="fa-solid fa-arrow-right"></i></span>
           </button>
-          <div class="auth-divider"><span>Outras opções</span></div>
+          <button class="auth-divider" type="button" id="login-options-toggle" aria-expanded="false" aria-controls="login-options-panel">
+            <span>Outras opções</span>
+          </button>
+          <div class="auth-options-panel" id="login-options-panel" hidden>
+            <button type="button" class="auth-secondary-action" id="register-link">
+              <i class="fa-solid fa-building-user"></i>
+              <span>
+                <strong>Criar conta</strong>
+                <small>Cadastre sua empresa e usuário administrador</small>
+              </span>
+            </button>
+          </div>
         </form>
 
         <footer class="auth-footer">
-          <span>© 2026 Axium · Política de Privacidade · Suporte 24/7</span>
+          <span>© 2026 MovStok · Política de Privacidade · Suporte 24/7</span>
           <strong><i></i> Sistemas operacionais</strong>
         </footer>
       </div>
