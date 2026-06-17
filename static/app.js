@@ -680,12 +680,20 @@ function renderBarChart(canvasId, labels, data) {
   });
 }
 
+// ===================================================
+// AUTH VISUAL EFFECTS (PREMIUM SAAS)
+// ===================================================
+
 function showAuth() {
-  $("#auth").style.display = "block";
-  $("#app-shell").classList.remove("show");
+  const authEl = document.getElementById("auth");
+  if (authEl) {
+    authEl.style.display = "flex"; // Necessário para o layout Premium
+    authEl.classList.add("fade-in");
+  }
+  document.getElementById("app-shell")?.classList.remove("show");
   MovStok.state.user = null;
   MovStok.state.permissions = new Set();
-  if (location.pathname !== "/login") {
+  if (window.location.pathname !== "/login") {
     history.replaceState({}, "", "/login");
   }
 }
@@ -2900,9 +2908,25 @@ function bindShellEvents() {
     sidebarBackdrop?.classList.remove("show");
   };
 
+  // Efeito Mostrar/Ocultar Senha
   $("#login-show-password")?.addEventListener("change", (event) => {
     $("#login-password").type = event.currentTarget.checked ? "text" : "password";
   });
+
+  // Painel de Opções (Toggle)
+  const optionsToggle = document.getElementById("login-options-toggle");
+  const optionsPanel = document.getElementById("login-options-panel");
+  if (optionsToggle && optionsPanel) {
+    optionsToggle.addEventListener("click", () => {
+      const isOpen = optionsToggle.getAttribute("aria-expanded") === "true";
+      optionsToggle.setAttribute("aria-expanded", String(!isOpen));
+      optionsPanel.hidden = isOpen;
+      // Efeito visual suave
+      if (!isOpen) {
+        optionsPanel.style.animation = "authFadeIn 0.3s ease-out";
+      }
+    });
+  }
 
   $("#login-form").addEventListener("submit", async (event) => {
     event.preventDefault();
