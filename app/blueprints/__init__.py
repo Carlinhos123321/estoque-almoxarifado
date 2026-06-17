@@ -1,1 +1,2 @@
-# MovStok blueprints package
+# IMA Stock blueprints package
+

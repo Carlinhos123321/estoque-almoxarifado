@@ -1,4 +1,4 @@
-"""Security controls for the MovStok Flask app.
+"""Security controls for the IMA Stock Flask app.
 
 Client-side code can always be inspected in a browser. The protections here
 therefore focus on the assets that actually matter: sessions, API requests,
@@ -122,3 +122,4 @@ def init_security(app):
                 "max-age=31536000; includeSubDomains",
             )
         return response
+

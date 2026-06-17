@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>MovStok ERP - Gestão de Almoxarifado</title>
+<title>IMA Stock - Gestão de Almoxarifado</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -16,26 +16,26 @@
 <!-- ============ LOGIN ============ -->
 <section id="auth" class="auth-screen">
   <div class="auth-layout">
+    <div class="warehouse-visual" aria-hidden="true">
+      <img src="/static/img/auth/imaflorestal.png" alt="" />
+    </div>
+
     <aside class="auth-left">
       <header class="auth-brand">
-        <div class="auth-brand-mark">MV</div>
+        <div class="auth-brand-mark">IMA</div>
         <div>
-          <strong>MovStok</strong>
-          <span>Warehouse Management System</span>
+          <strong>IMA Stock</strong>
+          <span>Gestão inteligente de almoxarifado</span>
         </div>
       </header>
-
-      <div class="warehouse-visual" aria-hidden="true">
-        <img src="/static/img/auth/imaflorestal.png" alt="Warehouse visual" style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px; box-shadow: var(--shadow-lg);">
-      </div>
     </aside>
 
     <aside class="auth-right">
       <div class="auth-content">
         <div class="auth-accent"></div>
         <div class="welcome">
-          <h2>Bem-vindo</h2>
-          <p>Faça login para gerenciar seu almoxarifado</p>
+          <h2>IMA Stock</h2>
+          <p>Faça login para gerenciar estoque, entradas e saídas com segurança.</p>
         </div>
         <form class="login-form" id="login-form" autocomplete="on">
           <div class="field auth-field">
@@ -83,7 +83,7 @@
         </form>
 
         <footer class="auth-footer">
-          <span>© <span id="auth-year">2026</span> MovStok · <a href="javascript:void(0)" id="btn-privacy">Privacidade</a> · <a href="javascript:void(0)" id="btn-support">Suporte</a></span>
+          <span>© <span id="auth-year">2026</span> IMA Stock · <a href="javascript:void(0)" id="btn-privacy">Privacidade</a> · <a href="javascript:void(0)" id="btn-support">Suporte</a></span>
           <a href="javascript:void(0)" id="btn-help" style="color:var(--text-3); font-weight:600">Central de Ajuda</a>
         </footer>
       </div>
@@ -96,9 +96,9 @@
   <!-- SIDEBAR -->
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-top">
-      <div class="sidebar-logo">MV</div>
+      <div class="sidebar-logo">IMA</div>
       <div class="sidebar-title">
-        <strong>MovStok</strong>
+        <strong>IMA Stock</strong>
         <small>ERP</small>
       </div>
       <button class="sidebar-toggle" id="sidebar-toggle" title="Recolher">

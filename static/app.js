@@ -1,9 +1,9 @@
 /* ==========================================================================
-   MovStok ERP - Corporate SaaS Architecture
+   IMA Stock - Corporate SaaS Architecture
    Core: Application Controller, State & Service Registry
    ========================================================================== */
 
-const MovStok = {
+const IMAStock = {
   version: "2.0.0",
   
   state: {
@@ -32,27 +32,27 @@ const MovStok = {
 
     Products: {
       list: (params) => api(`/api/products${buildQuery(params)}`),
-      save: (data, id = null) => MovStok.Services.request(id ? `/api/products/${id}` : "/api/products", {
+      save: (data, id = null) => IMAStock.Services.request(id ? `/api/products/${id}` : "/api/products", {
         method: id ? "PUT" : "POST",
         body: data
       }),
     },
     Stock: {
-      entry: (data) => MovStok.Services.request("/api/entries", { method: "POST", body: data }),
-      output: (data) => MovStok.Services.request("/api/outputs", { method: "POST", body: data }),
+      entry: (data) => IMAStock.Services.request("/api/entries", { method: "POST", body: data }),
+      output: (data) => IMAStock.Services.request("/api/outputs", { method: "POST", body: data }),
     },
     Auth: {
       async check() {
-        const session = await MovStok.Services.request("/api/auth/me");
+        const session = await IMAStock.Services.request("/api/auth/me");
         if (session.authenticated) {
-          MovStok.state.user = session.user;
-          MovStok.state.permissions = new Set(session.permissions || []);
+          IMAStock.state.user = session.user;
+          IMAStock.state.permissions = new Set(session.permissions || []);
           return true;
         }
         return false;
       },
       logout: async () => {
-        await MovStok.Services.request("/api/auth/logout", { method: "POST" });
+        await IMAStock.Services.request("/api/auth/logout", { method: "POST" });
         location.reload();
       }
     }
@@ -214,7 +214,7 @@ function initials(name) {
 }
 
 function hasPermission(code) {
-  return MovStok.state.permissions.has(code) || ["admin", "super_admin"].includes(MovStok.state.user?.role?.name);
+  return IMAStock.state.permissions.has(code) || ["admin", "super_admin"].includes(IMAStock.state.user?.role?.name);
 }
 
 function canAccessPage(page) {
@@ -238,8 +238,8 @@ function isUnsafeRequest(method = "GET") {
 }
 
 async function getCsrfToken() {
-  if (MovStok.state.security.csrfToken) {
-    return MovStok.state.security.csrfToken;
+  if (IMAStock.state.security.csrfToken) {
+    return IMAStock.state.security.csrfToken;
   }
 
   const response = await fetch("/api/auth/csrf", {
@@ -253,7 +253,7 @@ async function getCsrfToken() {
   if (!response.ok || !payload.csrf_token) {
     throw new Error("Não foi possível validar a segurança da sessão.");
   }
-  MovStok.state.security.csrfToken = payload.csrf_token;
+  IMAStock.state.security.csrfToken = payload.csrf_token;
   return payload.csrf_token;
 }
 
@@ -283,23 +283,32 @@ async function api(path, options = {}) {
   const response = await fetch(path, config);
   const contentType = response.headers.get("content-type") || "";
   const payload = contentType.includes("application/json")
-    ? await response.json()
-    : await response.text();
+    ? await response.json().catch(() => ({}))
+    : await response.text().catch(() => "");
 
   if (!response.ok) {
     if (response.status === 401) {
       showAuth();
     }
     if (response.status === 419) {
-      MovStok.state.security.csrfToken = null;
+      IMAStock.state.security.csrfToken = null;
     }
-    const message = typeof payload === "string"
-      ? payload
-      : payload.error || "Não foi possível concluir a operação.";
+    const message = errorMessageFromPayload(payload);
     throw new Error(message);
   }
 
   return payload;
+}
+
+function errorMessageFromPayload(payload) {
+  if (typeof payload === "string") {
+    const text = payload.trim();
+    if (!text || /^<!doctype html/i.test(text) || /^<html/i.test(text)) {
+      return "Erro interno no servidor. Tente novamente em instantes.";
+    }
+    return text;
+  }
+  return payload?.error || "Não foi possível concluir a operação.";
 }
 
 function pageWrap() {
@@ -557,39 +566,39 @@ async function confirmAction(title, message, actionLabel, action) {
 async function loadLookupData(types = ["categories", "suppliers", "products", "employees", "locations"]) {
   const tasks = [];
   if (types.includes("categories")) {
-    tasks.push(api("/api/categories").then((data) => { MovStok.state.cache.categories = data.items || []; }));
+    tasks.push(api("/api/categories").then((data) => { IMAStock.state.cache.categories = data.items || []; }));
   }
   if (types.includes("suppliers")) {
-    tasks.push(api("/api/suppliers?paginated=0").then((data) => { MovStok.state.cache.suppliers = data.items || []; }));
+    tasks.push(api("/api/suppliers?paginated=0").then((data) => { IMAStock.state.cache.suppliers = data.items || []; }));
   }
   if (types.includes("products")) {
-    tasks.push(api("/api/products?per_page=200").then((data) => { MovStok.state.cache.products = data.items || []; }));
+    tasks.push(api("/api/products?per_page=200").then((data) => { IMAStock.state.cache.products = data.items || []; }));
   }
   if (types.includes("employees")) {
-    tasks.push(api("/api/employees?paginated=0").then((data) => { MovStok.state.cache.employees = data.items || []; }));
+    tasks.push(api("/api/employees?paginated=0").then((data) => { IMAStock.state.cache.employees = data.items || []; }));
   }
   if (types.includes("roles")) {
-    tasks.push(api("/api/roles").then((data) => { MovStok.state.cache.roles = data.items || []; }));
+    tasks.push(api("/api/roles").then((data) => { IMAStock.state.cache.roles = data.items || []; }));
   }
   if (types.includes("permissions")) {
-    tasks.push(api("/api/permissions").then((data) => { MovStok.state.cache.permissions = data.items || []; }));
+    tasks.push(api("/api/permissions").then((data) => { IMAStock.state.cache.permissions = data.items || []; }));
   }
   if (types.includes("locations")) {
-    tasks.push(api("/api/locations").then((data) => { MovStok.state.cache.locations = data.items || []; }));
+    tasks.push(api("/api/locations").then((data) => { IMAStock.state.cache.locations = data.items || []; }));
   }
   await Promise.all(tasks);
 }
 
 function destroyCharts() {
-  Object.values(MovStok.state.charts).forEach((chart) => chart?.destroy?.());
-  MovStok.state.charts = {};
+  Object.values(IMAStock.state.charts).forEach((chart) => chart?.destroy?.());
+  IMAStock.state.charts = {};
 }
 
 function renderLineChart(canvasId, labels, entries, outputs) {
   if (!window.Chart) return;
   const ctx = document.getElementById(canvasId);
   if (!ctx) return;
-  MovStok.state.charts[canvasId] = new Chart(ctx, {
+  IMAStock.state.charts[canvasId] = new Chart(ctx, {
     type: "line",
     data: {
       labels,
@@ -646,7 +655,7 @@ function renderBarChart(canvasId, labels, data) {
   if (!window.Chart) return;
   const ctx = document.getElementById(canvasId);
   if (!ctx) return;
-  MovStok.state.charts[canvasId] = new Chart(ctx, {
+  IMAStock.state.charts[canvasId] = new Chart(ctx, {
     type: "bar",
     data: {
       labels,
@@ -691,8 +700,8 @@ function showAuth() {
     authEl.classList.add("fade-in");
   }
   document.getElementById("app-shell")?.classList.remove("show");
-  MovStok.state.user = null;
-  MovStok.state.permissions = new Set();
+  IMAStock.state.user = null;
+  IMAStock.state.permissions = new Set();
   if (window.location.pathname !== "/login") {
     history.replaceState({}, "", "/login");
   }
@@ -704,9 +713,9 @@ function showApp() {
 }
 
 function updateUserBox() {
-  $("#user-name").textContent = MovStok.state.user?.name || "Usuário";
-  $("#user-role").textContent = roleLabel(MovStok.state.user?.role);
-  $("#user-avatar").textContent = initials(MovStok.state.user?.name);
+  $("#user-name").textContent = IMAStock.state.user?.name || "Usuário";
+  $("#user-role").textContent = roleLabel(IMAStock.state.user?.role);
+  $("#user-avatar").textContent = initials(IMAStock.state.user?.name);
 }
 
 function enforceMenuPermissions() {
@@ -723,8 +732,8 @@ async function checkSession() {
     showAuth();
     return false;
   }
-  MovStok.state.user = session.user;
-  MovStok.state.permissions = new Set(session.permissions || []);
+  IMAStock.state.user = session.user;
+  IMAStock.state.permissions = new Set(session.permissions || []);
   updateUserBox();
   enforceMenuPermissions();
   showApp();
@@ -739,7 +748,7 @@ function pageFromPath() {
 }
 
 function updateNavigation(page) {
-  MovStok.state.currentPage = page;
+  IMAStock.state.currentPage = page;
   $("#bc-current").textContent = Pages[page] || page;
   $all(".menu-item").forEach((item) => {
     item.classList.toggle("active", item.dataset.page === page);
@@ -819,7 +828,7 @@ async function renderDashboard() {
   // KPIs consolidados com IDs para animação
   pageWrap().innerHTML = `
     <div class="greeting-box">
-      <h2>${greeting}, ${escapeHtml(MovStok.state.user?.name.split(' ')[0])}</h2>
+      <h2>${greeting}, ${escapeHtml(IMAStock.state.user?.name.split(' ')[0])}</h2>
       <p>Hoje é ${escapeHtml(todayFull)}</p>
     </div>
 
@@ -1037,7 +1046,7 @@ async function renderProducts(params = {}) {
         filters: `
           <select id="products-category">
             <option value="">Todas as categorias</option>
-            ${optionList(MovStok.state.cache.categories, params.category_id)}
+            ${optionList(IMAStock.state.cache.categories, params.category_id)}
           </select>
           <select id="products-stock">
             <option value="">Todos os estoques</option>
@@ -1134,14 +1143,14 @@ function productForm(product = {}) {
         <label>Categoria</label>
         <select name="category_id">
           <option value="">Sem categoria</option>
-          ${optionList(MovStok.state.cache.categories, product.category?.id)}
+          ${optionList(IMAStock.state.cache.categories, product.category?.id)}
         </select>
       </div>
       <div class="field">
         <label>Fornecedor</label>
         <select name="supplier_id">
           <option value="">Sem fornecedor</option>
-          ${optionList(MovStok.state.cache.suppliers, product.supplier?.id)}
+          ${optionList(IMAStock.state.cache.suppliers, product.supplier?.id)}
         </select>
       </div>
       <div class="field">
@@ -1217,7 +1226,7 @@ function downloadImportTemplate() {
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
-  link.download = "modelo_importacao_movstok.csv";
+  link.download = "modelo_importacao_ima_stock.csv";
   link.click();
 }
 
@@ -1297,9 +1306,9 @@ async function openImportModal() {
         // Validação básica: Requer ao menos SKU e Nome
         if (!sku || !name) return null;
 
-        // Tenta resolver a categoria pelo nome usando o cache do MovStok
+        // Tenta resolver a categoria pelo nome usando o cache do IMA Stock
         const catName = findValue(["categoria"]);
-        const category = MovStok.state.cache.categories.find(c => normalize(c.name) === normalize(catName));
+        const category = IMAStock.state.cache.categories.find(c => normalize(c.name) === normalize(catName));
 
         return {
           sku: String(sku).trim(),
@@ -1556,7 +1565,7 @@ function entriesTable(items) {
 }
 
 function movementProductOptions(selected) {
-  return MovStok.state.cache.products.map((p) => `
+  return IMAStock.state.cache.products.map((p) => `
     <option value="${p.id}" ${Number(selected) === Number(p.id) ? "selected" : ""}>
       ${escapeHtml(p.sku)} · ${escapeHtml(p.name)} (${fmtQty(p.stock_quantity)} ${escapeHtml(p.unit)})
     </option>
@@ -1580,7 +1589,7 @@ function openEntryModal(defaults = {}) {
           <label>Fornecedor</label>
           <select name="supplier_id">
             <option value="">Fornecedor do produto</option>
-            ${optionList(MovStok.state.cache.suppliers)}
+            ${optionList(IMAStock.state.cache.suppliers)}
           </select>
         </div>
         <div class="field">
@@ -1614,7 +1623,7 @@ function openEntryModal(defaults = {}) {
       await api("/api/entries", { method: "POST", body: getFormData(event.currentTarget) });
       closeModal();
       toast("Entrada registrada", "Saldo atualizado com sucesso.");
-      renderPage(MovStok.state.currentPage);
+      renderPage(IMAStock.state.currentPage);
     } catch (error) {
       toast("Erro ao registrar entrada", error.message, "danger");
     }
@@ -1700,7 +1709,7 @@ function openOutputModal(defaults = {}) {
           <label>Funcionário</label>
           <select name="employee_id">
             <option value="">Sem vínculo</option>
-            ${MovStok.state.cache.employees.map((e) => `<option value="${e.id}">${escapeHtml(e.enrollment)} · ${escapeHtml(e.name)}</option>`).join("")}
+            ${IMAStock.state.cache.employees.map((e) => `<option value="${e.id}">${escapeHtml(e.enrollment)} · ${escapeHtml(e.name)}</option>`).join("")}
           </select>
         </div>
         <div class="field">
@@ -1747,7 +1756,7 @@ function openOutputModal(defaults = {}) {
       await api("/api/outputs", { method: "POST", body: getFormData(event.currentTarget) });
       closeModal();
       toast("Saída registrada", "Saldo atualizado com sucesso.");
-      renderPage(MovStok.state.currentPage);
+      renderPage(IMAStock.state.currentPage);
     } catch (error) {
       toast("Erro ao registrar saída", error.message, "danger");
     }
@@ -2400,7 +2409,7 @@ function userForm(u = {}) {
         <label>Perfil</label>
         <select name="role_id" id="user-role-select">
           <option value="">Sem perfil</option>
-          ${optionList(MovStok.state.cache.roles, selectedRole, "label")}
+          ${optionList(IMAStock.state.cache.roles, selectedRole, "label")}
         </select>
       </div>
       <div class="field full">
@@ -2424,13 +2433,13 @@ function userForm(u = {}) {
 }
 
 function rolePermissionPreview(roleId) {
-  const role = MovStok.state.cache.roles.find((item) => Number(item.id) === Number(roleId));
+  const role = IMAStock.state.cache.roles.find((item) => Number(item.id) === Number(roleId));
   if (!role) return `<span class="text-muted">Selecione um perfil para aplicar permissões.</span>`;
   if (["admin", "super_admin"].includes(role.name)) {
     return `<span class="badge success">Acesso total</span>`;
   }
   const labels = (role.permissions || []).map((code) => {
-    const permission = MovStok.state.cache.permissions.find((item) => item.code === code);
+    const permission = IMAStock.state.cache.permissions.find((item) => item.code === code);
     return permission?.label || code;
   });
   return labels.length
@@ -2543,7 +2552,7 @@ async function renderSettings() {
           <button class="btn sm ghost" id="new-location"><i class="fa-solid fa-plus"></i> Adicionar</button>
         </div>
         <div class="panel-body">
-          ${locationsTable(MovStok.state.cache.locations)}
+          ${locationsTable(IMAStock.state.cache.locations)}
         </div>
       </section>
     </div>
@@ -2660,7 +2669,7 @@ function bindRowActions(actions) {
 }
 
 async function loadNotifications() {
-  if (!MovStok.state.user) return;
+  if (!IMAStock.state.user) return;
   try {
     const data = await api("/api/notifications");
     const count = $("#notif-count");
@@ -2720,7 +2729,7 @@ function openRegisterModal() {
         <div class="form-message full" id="register-feedback" role="status"></div>
       </form>
       <p class="text-muted" style="font-size: 12px; margin-top: 15px">
-        Ao criar conta, você concorda com nossos <a href="javascript:MovStok.UI.showTerms()">Termos de Uso</a>.</p>
+        Ao criar conta, você concorda com nossos <a href="javascript:IMAStock.UI.showTerms()">Termos de Uso</a>.</p>
     `,
     footer: `
       <button class="btn ghost" type="button" data-modal-close>Cancelar</button>
@@ -2934,7 +2943,7 @@ function bindShellEvents() {
           remember: $("#login-remember").checked,
         },
       });
-      MovStok.state.user = data.user;
+      IMAStock.state.user = data.user;
       await checkSession();
       navigate(pageFromPath(), true);
       toast("Bem-vindo", "Sessão iniciada com sucesso.");
@@ -3018,10 +3027,10 @@ function bindShellEvents() {
         body: `
           <table class="data-table">
             <tbody>
-              <tr><td>Nome</td><td><strong>${escapeHtml(MovStok.state.user?.name)}</strong></td></tr>
-              <tr><td>E-mail</td><td>${escapeHtml(MovStok.state.user?.email)}</td></tr>
-              <tr><td>Perfil</td><td>${escapeHtml(roleLabel(MovStok.state.user?.role))}</td></tr>
-              <tr><td>Status</td><td>${userStatusBadge(MovStok.state.user?.status)}</td></tr>
+              <tr><td>Nome</td><td><strong>${escapeHtml(IMAStock.state.user?.name)}</strong></td></tr>
+              <tr><td>E-mail</td><td>${escapeHtml(IMAStock.state.user?.email)}</td></tr>
+              <tr><td>Perfil</td><td>${escapeHtml(roleLabel(IMAStock.state.user?.role))}</td></tr>
+              <tr><td>Status</td><td>${userStatusBadge(IMAStock.state.user?.status)}</td></tr>
             </tbody>
           </table>
         `,
@@ -3072,7 +3081,7 @@ function bindShellEvents() {
   window.addEventListener("popstate", () => renderPage(pageFromPath()));
 }
 
-MovStok.UI.showHelp = () => {
+IMAStock.UI.showHelp = () => {
   openModal({
     title: "Central de Ajuda",
     body: `<p>Para suporte rápido, utilize o atalho <strong>Ctrl + K</strong> para pesquisar produtos ou acesse o módulo de <strong>Atividades</strong> para auditoria.</p>`,
@@ -3080,23 +3089,23 @@ MovStok.UI.showHelp = () => {
   });
 };
 
-MovStok.UI.showSupport = () => {
+IMAStock.UI.showSupport = () => {
   openModal({
     title: "Contato com Suporte",
-    body: `<p>E-mail: suporte@movstok.com.br<br>WhatsApp: (11) 99999-9999<br>Atendimento de Segunda a Sexta, das 08h às 18h.</p>`,
+    body: `<p>E-mail: suporte@imastock.com.br<br>WhatsApp: (11) 99999-9999<br>Atendimento de Segunda a Sexta, das 08h às 18h.</p>`,
     footer: `<button class="btn primary" data-modal-close>Fechar</button>`
   });
 };
 
-MovStok.UI.showTerms = () => {
+IMAStock.UI.showTerms = () => {
   openModal({
     title: "Termos de Uso",
-    body: `<div style="font-size:13px"><p>O MovStok ERP é uma ferramenta de gestão. O usuário é responsável pela veracidade dos dados inseridos e pela segurança de sua senha.</p></div>`,
+    body: `<div style="font-size:13px"><p>O IMA Stock é uma ferramenta de gestão. O usuário é responsável pela veracidade dos dados inseridos e pela segurança de sua senha.</p></div>`,
     footer: `<button class="btn primary" data-modal-close>Fechar</button>`
   });
 };
 
-MovStok.UI.showPrivacy = () => {
+IMAStock.UI.showPrivacy = () => {
   openModal({
     title: "Política de Privacidade",
     body: `<div style="font-size:13px"><p>Seus dados são criptografados e não são compartilhados com terceiros. Utilizamos cookies apenas para manter sua sessão ativa.</p></div>`,
@@ -3111,10 +3120,10 @@ async function boot() {
   bindShellEvents();
 
   // Institucional: Bind de links do rodapé e login
-  $("#btn-help")?.addEventListener("click", MovStok.UI.showHelp);
-  $("#btn-support")?.addEventListener("click", MovStok.UI.showSupport);
-  $("#btn-terms")?.addEventListener("click", MovStok.UI.showTerms);
-  $("#btn-privacy")?.addEventListener("click", MovStok.UI.showPrivacy);
+  $("#btn-help")?.addEventListener("click", IMAStock.UI.showHelp);
+  $("#btn-support")?.addEventListener("click", IMAStock.UI.showSupport);
+  $("#btn-terms")?.addEventListener("click", IMAStock.UI.showTerms);
+  $("#btn-privacy")?.addEventListener("click", IMAStock.UI.showPrivacy);
 
   // Recuperação de Senha: Checa se há um token de reset na URL
   const urlParams = new URLSearchParams(window.location.search);

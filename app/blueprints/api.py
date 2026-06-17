@@ -1,4 +1,4 @@
-"""MovStok ERP - Main REST API blueprint.
+"""IMA Stock ERP - Main REST API blueprint.
 
 Exposes /api/* endpoints for every ERP module:
   - /api/dashboard
@@ -610,7 +610,7 @@ def export_stock_excel():
     wb.save(buf); buf.seek(0)
     log_activity("export", "report", None, "Exportação Excel: Estoque")
     return send_file(buf, as_attachment=True,
-                     download_name=f"movstok_estoque_{datetime.utcnow():%Y%m%d_%H%M}.xlsx",
+                     download_name=f"IMA_Stock_estoque_{datetime.utcnow():%Y%m%d_%H%M}.xlsx",
                      mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 
@@ -669,7 +669,7 @@ def export_movements_excel():
     wb.save(buf); buf.seek(0)
     log_activity("export", "report", None, f"Exportação Excel: Movimentações ({days}d)")
     return send_file(buf, as_attachment=True,
-                     download_name=f"movstok_movimentacoes_{datetime.utcnow():%Y%m%d_%H%M}.xlsx",
+                     download_name=f"IMA_Stock_movimentacoes_{datetime.utcnow():%Y%m%d_%H%M}.xlsx",
                      mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 
@@ -689,7 +689,7 @@ def export_stock_pdf():
                             leftMargin=12 * mm, rightMargin=12 * mm,
                             topMargin=12 * mm, bottomMargin=12 * mm)
     styles = getSampleStyleSheet()
-    story = [Paragraph("<b>MovStok - Relatório de Estoque</b>", styles["Title"])]
+    story = [Paragraph("<b>IMA Stock - Relatório de Estoque</b>", styles["Title"])]
     story.append(Paragraph(
         f"Emitido em {datetime.now().strftime('%d/%m/%Y %H:%M')}",
         styles["Normal"]))
@@ -728,7 +728,7 @@ def export_stock_pdf():
     buf.seek(0)
     log_activity("export", "report", None, "Exportação PDF: Estoque")
     return send_file(buf, as_attachment=True,
-                     download_name=f"movstok_estoque_{datetime.utcnow():%Y%m%d_%H%M}.pdf",
+                     download_name=f"IMA_Stock_estoque_{datetime.utcnow():%Y%m%d_%H%M}.pdf",
                      mimetype="application/pdf")
 
 
@@ -1020,3 +1020,4 @@ def legacy_resumo():
         "baixo_estoque": low,
         "total_funcionarios": emps,
     })
+

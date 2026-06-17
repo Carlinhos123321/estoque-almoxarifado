@@ -1,4 +1,4 @@
-"""MovStok ERP - Database models (SQLAlchemy).
+"""IMA Stock ERP - Database models (SQLAlchemy).
 
 All entities required by the ERP:
 - Company, User, Role, Permission, RolePermission, UserRole
@@ -541,3 +541,4 @@ class Notification(db.Model, TimestampMixin):
             "read": self.read_at is not None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
+

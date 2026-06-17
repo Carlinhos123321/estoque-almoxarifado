@@ -2,11 +2,12 @@
 from functools import wraps
 from typing import Callable
 
-from flask import abort, jsonify, request
+from flask import abort, current_app, has_request_context, jsonify, request
 from flask_login import current_user
 
 from .extensions import db
 from .models import ActivityLog
+from .security import get_client_ip
 
 
 def login_required_api(view: Callable):
@@ -45,12 +46,13 @@ def log_activity(action: str, entity: str, entity_id: int | None = None,
             entity=entity,
             entity_id=entity_id,
             description=description[:400],
-            ip=request.remote_addr if request else None,
+            ip=get_client_ip() if has_request_context() else None,
         )
         db.session.add(log)
         db.session.commit()
     except Exception:
         db.session.rollback()
+        current_app.logger.exception("Failed to persist activity log for %s:%s", entity, entity_id)
 
 
 def paginate_query(query, default_per_page: int = 20, max_per_page: int = 200):

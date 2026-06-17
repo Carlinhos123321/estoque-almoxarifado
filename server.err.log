@@ -1,0 +1,56 @@
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.0.106:5000
+Press CTRL+C to quit
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 147-484-692
+127.0.0.1 - - [17/Jun/2026 09:58:50] "GET /api/auth/csrf HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jun/2026 09:58:54] "POST /api/auth/login HTTP/1.1" 401 -
+127.0.0.1 - - [17/Jun/2026 09:59:32] "GET /api/auth/csrf HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jun/2026 09:59:36] "POST /api/auth/login HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jun/2026 09:59:46] "GET /api/dashboard HTTP/1.1" 200 -
+ * Detected change in 'C:\\Users\\joao\\Desktop\\estoque-almoxarifado\\app\\__init__.py', reloading
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 147-484-692
+ * Detected change in 'C:\\Users\\joao\\Desktop\\estoque-almoxarifado\\app\\__init__.py', reloading
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 147-484-692
+127.0.0.1 - - [17/Jun/2026 10:00:48] "GET / HTTP/1.1" 302 -
+127.0.0.1 - - [17/Jun/2026 10:00:48] "GET /app HTTP/1.1" 302 -
+127.0.0.1 - - [17/Jun/2026 10:00:49] "GET /login?next=/app HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jun/2026 10:00:49] "GET /static/app.css HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jun/2026 10:00:49] "GET /static/app.js HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jun/2026 10:00:49] "GET /static/img/auth/imaflorestal.png HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jun/2026 10:00:49] "GET /api/auth/me HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jun/2026 10:00:49] "GET /static/favicon.svg HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jun/2026 10:01:09] "GET /api/auth/csrf HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jun/2026 10:01:14] "POST /api/auth/login HTTP/1.1" 401 -
+127.0.0.1 - - [17/Jun/2026 10:01:21] "POST /api/auth/login HTTP/1.1" 401 -
+127.0.0.1 - - [17/Jun/2026 10:01:31] "POST /api/auth/login HTTP/1.1" 401 -
+127.0.0.1 - - [17/Jun/2026 10:01:36] "POST /api/auth/login HTTP/1.1" 401 -
+127.0.0.1 - - [17/Jun/2026 10:02:28] "POST /api/auth/register HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jun/2026 10:02:29] "GET /api/auth/me HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jun/2026 10:02:39] "GET /api/dashboard HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jun/2026 10:02:40] "GET /api/notifications HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jun/2026 10:02:40] "GET /api/suppliers?paginated=0 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jun/2026 10:02:41] "GET /api/products?per_page=200 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jun/2026 10:02:42] "GET /api/entries?page=1 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jun/2026 10:02:43] "GET /api/notifications HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jun/2026 10:02:51] "GET /api/dashboard HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jun/2026 10:02:52] "GET /api/notifications HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jun/2026 10:02:54] "GET /api/dashboard HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jun/2026 10:02:55] "GET /api/suppliers?paginated=0 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jun/2026 10:02:55] "GET /api/notifications HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jun/2026 10:02:55] "GET /api/products?per_page=200 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jun/2026 10:02:57] "GET /api/employees?paginated=0 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jun/2026 10:02:57] "GET /api/entries?page=1 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jun/2026 10:02:57] "GET /api/products?per_page=200 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jun/2026 10:02:58] "GET /api/notifications HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jun/2026 10:02:58] "GET /api/outputs?page=1 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jun/2026 10:02:59] "GET /api/stock?page=1 HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jun/2026 10:02:59] "GET /api/notifications HTTP/1.1" 200 -
+127.0.0.1 - - [17/Jun/2026 10:03:00] "GET /api/notifications HTTP/1.1" 200 -

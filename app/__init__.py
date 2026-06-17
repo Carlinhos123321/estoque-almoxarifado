@@ -1,13 +1,17 @@
-"""MovStok ERP - Flask application factory."""
+"""IMA Stock - Flask application factory."""
 import os
-from flask import Flask, redirect, url_for
-from dotenv import load_dotenv
+import re
 
-from .extensions import db, login_manager, migrate
+from flask import Flask, jsonify, redirect, request, url_for
+from werkzeug.middleware.proxy_fix import ProxyFix
+
 from .config import Config
+from .extensions import db, login_manager, migrate
 from .security import init_security
 
-load_dotenv()
+
+def _mask_database_uri(uri: str) -> str:
+    return re.sub(r"//([^:/@]+):([^@]+)@", r"//\1:***@", uri)
 
 
 def create_app(config_class: type = Config) -> Flask:
@@ -17,13 +21,20 @@ def create_app(config_class: type = Config) -> Flask:
         static_url_path="/static",
     )
     app.config.from_object(config_class)
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
+
+    if app.config.get("LOG_DATABASE_URI"):
+        app.logger.info(
+            "SQLAlchemy database URI: %s",
+            _mask_database_uri(app.config["SQLALCHEMY_DATABASE_URI"]),
+        )
 
     # Extensions
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
     login_manager.login_view = "auth.login_page"
-    login_manager.login_message = "Faça login para continuar."
+    login_manager.login_message = "Faca login para continuar."
     login_manager.login_message_category = "warning"
 
     init_security(app)
@@ -40,14 +51,15 @@ def create_app(config_class: type = Config) -> Flask:
     app.register_blueprint(web_bp)
     app.register_blueprint(api_bp, url_prefix="/api")
 
-    # Auto-create tables + seed on first boot (safe + idempotent)
-    with app.app_context():
-        try:
-            db.create_all()
-            from .seed import seed_initial
-            seed_initial()
-        except Exception as exc:  # pragma: no cover
-            app.logger.warning("DB init/seed skipped: %s", exc)
+    if app.config.get("AUTO_CREATE_SCHEMA"):
+        with app.app_context():
+            try:
+                db.create_all()
+                from .seed import seed_initial
+
+                seed_initial()
+            except Exception as exc:  # pragma: no cover
+                app.logger.exception("Automatic DB init/seed failed: %s", exc)
 
     @app.route("/")
     def index():
@@ -56,8 +68,15 @@ def create_app(config_class: type = Config) -> Flask:
     @app.context_processor
     def inject_globals():
         return {
-            "APP_NAME": "MovStok",
-            "APP_TAGLINE": "ERP & Gestão de Almoxarifado",
+            "APP_NAME": "IMA Stock",
+            "APP_TAGLINE": "ERP & Gestao de Almoxarifado",
         }
+
+    @app.errorhandler(500)
+    def internal_server_error(error):
+        app.logger.exception("Unhandled application error: %s", error)
+        if request.path.startswith("/api/") or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({"error": "Erro interno no servidor. Tente novamente em instantes."}), 500
+        return app.send_static_file("index.html"), 500
 
     return app
