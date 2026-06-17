@@ -2913,20 +2913,7 @@ function bindShellEvents() {
     $("#login-password").type = event.currentTarget.checked ? "text" : "password";
   });
 
-  // Painel de Opções (Toggle)
-  const optionsToggle = document.getElementById("login-options-toggle");
-  const optionsPanel = document.getElementById("login-options-panel");
-  if (optionsToggle && optionsPanel) {
-    optionsToggle.addEventListener("click", () => {
-      const isOpen = optionsToggle.getAttribute("aria-expanded") === "true";
-      optionsToggle.setAttribute("aria-expanded", String(!isOpen));
-      optionsPanel.hidden = isOpen;
-      // Efeito visual suave
-      if (!isOpen) {
-        optionsPanel.style.animation = "authFadeIn 0.3s ease-out";
-      }
-    });
-  }
+  
 
   $("#login-form").addEventListener("submit", async (event) => {
     event.preventDefault();
