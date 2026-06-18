@@ -2155,3 +2155,462 @@ body { overflow-x: hidden; background: #f3f5f8; }
   }
 }
 
+/* ===================================================
+   PREMIUM SAAS REFINEMENTS
+   =================================================== */
+:root {
+  --entry: #15803d;
+  --output: #dc2626;
+  --finance: #0369a1;
+  --alert: #b45309;
+  --soft-shadow: 0 10px 30px rgba(15, 23, 42, .08);
+}
+
+.menu-group,
+.kpi-card .kpi-label,
+.panel-head h3,
+.data-table thead th,
+.badge {
+  letter-spacing: 0;
+}
+
+.kpi-card .kpi-value {
+  font-size: 26px;
+}
+
+.kpi-icon.blue,
+.kpi-icon.cyan {
+  background: var(--info-soft);
+  color: var(--finance);
+}
+
+.text-primary { color: var(--primary); }
+.text-success { color: var(--success); }
+.text-danger { color: var(--danger); }
+
+.sidebar {
+  background: #141f31;
+}
+
+.sidebar-menu {
+  padding: 14px 10px 20px;
+}
+
+.menu-group {
+  margin-top: 8px;
+  padding: 15px 10px 7px;
+  color: #9aa8bc;
+}
+
+.menu-item {
+  min-height: 40px;
+  border: 1px solid transparent;
+}
+
+.menu-item:hover {
+  border-color: rgba(255,255,255,.06);
+  background: rgba(255,255,255,.08);
+}
+
+.menu-item.active {
+  background: #2563eb;
+  border-color: rgba(255,255,255,.12);
+  box-shadow: 0 8px 18px rgba(37,99,235,.24);
+}
+
+.dashboard-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 18px;
+  padding: 20px 22px;
+  background: #fff;
+  border: 1px solid var(--enterprise-border);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+
+.dashboard-hero .eyebrow {
+  display: inline-flex;
+  margin-bottom: 7px;
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.dashboard-hero h2 {
+  font-size: 24px;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.dashboard-hero p {
+  max-width: 680px;
+  margin-top: 6px;
+  color: #64748b;
+}
+
+.dashboard-kpi-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.interactive-kpi {
+  cursor: pointer;
+  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+
+.interactive-kpi:hover,
+.interactive-kpi:focus-visible {
+  transform: translateY(-2px);
+  border-color: #b8c7da;
+  box-shadow: var(--soft-shadow);
+  outline: none;
+}
+
+.interactive-kpi.active {
+  border-color: rgba(29,78,216,.45);
+  box-shadow: 0 0 0 3px rgba(29,78,216,.08), var(--shadow);
+}
+
+.dashboard-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 330px;
+  gap: 16px;
+  align-items: start;
+}
+
+.dashboard-primary {
+  min-width: 0;
+}
+
+.dashboard-sidebar-widgets {
+  display: grid;
+  gap: 16px;
+}
+
+.dashboard-chart-panel .chart-box {
+  height: clamp(180px, 22vw, 224px);
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.detail-metric {
+  min-height: 104px;
+  padding: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fbfcfe;
+}
+
+.detail-icon {
+  width: 34px;
+  height: 34px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+.detail-metric.success .detail-icon { background: var(--success-soft); color: var(--success); }
+.detail-metric.danger .detail-icon { background: var(--danger-soft); color: var(--danger); }
+.detail-metric.warning .detail-icon { background: var(--warning-soft); color: var(--warning); }
+.detail-metric.info .detail-icon { background: var(--info-soft); color: var(--info); }
+
+.detail-metric span {
+  display: block;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.detail-metric strong {
+  display: block;
+  margin-top: 5px;
+  color: #0f172a;
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.detail-copy {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--enterprise-line);
+}
+
+.detail-copy strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 14px;
+}
+
+.detail-copy p {
+  margin-bottom: 12px;
+  color: #64748b;
+}
+
+.detail-table {
+  margin-top: 12px;
+}
+
+.dashboard-widget {
+  margin-bottom: 0;
+}
+
+.dashboard-widget .panel-body {
+  padding: 16px;
+}
+
+.dashboard-widget .empty-state {
+  padding: 24px 12px;
+}
+
+.dashboard-widget .empty-illustration {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+}
+
+.widget-movement {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+}
+
+.widget-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--success-soft);
+  color: var(--entry);
+}
+
+.dashboard-widget.output .widget-icon {
+  background: var(--danger-soft);
+  color: var(--output);
+}
+
+.widget-movement strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.widget-movement span,
+.critical-mini span {
+  display: block;
+  margin-top: 3px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.widget-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--enterprise-line);
+  color: #64748b;
+  font-size: 12px;
+}
+
+.widget-meta strong {
+  color: #0f172a;
+}
+
+.compact-list {
+  display: grid;
+  gap: 10px;
+}
+
+.critical-mini {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--enterprise-line);
+}
+
+.critical-mini:last-child {
+  border-bottom: 0;
+}
+
+.movement-kpi-grid {
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+}
+
+.movement-kpi.green::before { background: var(--entry); }
+.movement-kpi.red::before { background: var(--output); }
+.movement-kpi.amber::before { background: var(--alert); }
+.movement-kpi.cyan::before { background: var(--finance); }
+
+.stock-progress {
+  min-width: 150px;
+  margin-top: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.stock-progress-track {
+  width: 108px;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e5e7eb;
+  border: 1px solid #dbe2ea;
+}
+
+.stock-progress-track span {
+  display: block;
+  height: 100%;
+  min-width: 2px;
+  border-radius: inherit;
+  background: var(--success);
+  transition: width .24s ease;
+}
+
+.stock-progress.low .stock-progress-track span {
+  background: var(--warning);
+}
+
+.stock-progress.out .stock-progress-track span {
+  background: var(--danger);
+}
+
+.stock-progress strong {
+  width: 36px;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 750;
+  text-align: right;
+}
+
+.data-table .actions .action-label {
+  margin-left: 6px;
+}
+
+.empty-state {
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-illustration {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.8);
+}
+
+.empty-state h4 {
+  font-size: 17px;
+}
+
+.empty-state p {
+  color: #64748b;
+  line-height: 1.55;
+}
+
+.empty-cta {
+  margin-top: 18px;
+}
+
+.empty-cta i {
+  margin: 0;
+  font-size: 13px;
+  opacity: 1;
+}
+
+.alerts-grid .panel-body.alerts-list,
+.alerts-list {
+  padding: 0;
+}
+
+.alerts-list .empty-state {
+  padding: 42px 18px;
+}
+
+.alerts-list .notif-item {
+  cursor: pointer;
+  transition: background .16s ease;
+}
+
+.alerts-list .notif-item:hover {
+  background: #f8fafc;
+}
+
+.panel,
+.kpi-card,
+.table-wrap {
+  animation: premium-fade .18s ease both;
+}
+
+@keyframes premium-fade {
+  from { opacity: .86; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (max-width: 1200px) {
+  .dashboard-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .dashboard-hero {
+    align-items: stretch;
+    flex-direction: column;
+    padding: 18px;
+  }
+
+  .dashboard-hero h2 {
+    font-size: 22px;
+  }
+
+  .dashboard-kpi-grid,
+  .detail-grid,
+  .movement-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-chart-panel .chart-box {
+    height: 210px;
+  }
+
+  .stock-progress {
+    min-width: 132px;
+  }
+
+  .stock-progress-track {
+    width: 92px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel,
+  .kpi-card,
+  .table-wrap {
+    animation: none;
+  }
+}
+

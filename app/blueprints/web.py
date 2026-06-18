@@ -17,7 +17,7 @@ PAGES = [
     "dashboard", "produtos", "categorias", "fornecedores",
     "entradas", "saidas", "estoque",
     "funcionarios", "matriculas", "relatorios",
-    "financeiro", "configuracoes", "usuarios", "atividades",
+    "alertas", "financeiro", "configuracoes", "usuarios", "atividades",
     "administracao",
 ]
 
@@ -32,6 +32,7 @@ PAGE_PERMISSIONS = {
     "funcionarios": "employees.view",
     "matriculas": "employees.view",
     "relatorios": "reports.view",
+    "alertas": "dashboard.view",
     "financeiro": "finance.view",
     "configuracoes": "settings.view",
     "usuarios": "users.manage",

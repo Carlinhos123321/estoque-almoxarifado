@@ -91,6 +91,7 @@ const Pages = {
   produtos: "Produtos",
   categorias: "Categorias",
   fornecedores: "Fornecedores",
+  alertas: "Alertas",
   funcionarios: "Funcionários",
   matriculas: "Matrículas",
   relatorios: "Relatórios",
@@ -109,6 +110,7 @@ const Icons = {
   produtos: "fa-barcode",
   categorias: "fa-layer-group",
   fornecedores: "fa-handshake",
+  alertas: "fa-triangle-exclamation",
   funcionarios: "fa-id-badge",
   matriculas: "fa-id-card",
   relatorios: "fa-chart-column",
@@ -124,6 +126,7 @@ const PagePermissions = {
   produtos: "products.view",
   categorias: "categories.view",
   fornecedores: "suppliers.view",
+  alertas: "dashboard.view",
   entradas: "stock.entry",
   saidas: "stock.output",
   estoque: "stock.view",
@@ -351,12 +354,23 @@ function forbiddenPage(page) {
   `;
 }
 
-function emptyState(icon, title, description) {
+function emptyState(icon, title, description, action = null) {
+  const actionHtml = action ? (() => {
+    const tag = action.href ? "a" : "button";
+    const iconHtml = action.icon ? `<i class="fa-solid ${action.icon}"></i>` : "";
+    const idAttr = action.id ? ` id="${escapeHtml(action.id)}"` : "";
+    const hrefAttr = action.href ? ` href="${escapeHtml(action.href)}"` : "";
+    const typeAttr = tag === "button" ? ` type="${escapeHtml(action.type || "button")}"` : "";
+    const extraAttrs = action.attrs ? ` ${action.attrs}` : "";
+    const variant = action.variant || "primary";
+    return `<${tag}${idAttr}${hrefAttr}${typeAttr}${extraAttrs} class="btn ${variant} empty-cta">${iconHtml}${escapeHtml(action.label || "Começar")}</${tag}>`;
+  })() : "";
   return `
     <div class="empty-state">
       <div class="empty-illustration"><i class="fa-solid ${icon}"></i></div>
       <h4>${escapeHtml(title)}</h4>
       <p>${escapeHtml(description)}</p>
+      ${actionHtml}
     </div>
   `;
 }
@@ -408,6 +422,44 @@ function reasonLabel(reason) {
     loss: "Perda",
     transfer: "Transferência",
   })[reason] || reason || "-";
+}
+
+function localDateParam(date) {
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 10);
+}
+
+function startOfWeek(date = new Date()) {
+  const copy = new Date(date);
+  const day = copy.getDay();
+  const diff = (day === 0 ? -6 : 1) - day;
+  copy.setDate(copy.getDate() + diff);
+  copy.setHours(0, 0, 0, 0);
+  return copy;
+}
+
+function startOfMonth(date = new Date()) {
+  const copy = new Date(date);
+  copy.setDate(1);
+  copy.setHours(0, 0, 0, 0);
+  return copy;
+}
+
+function sumBy(items, selector) {
+  return (items || []).reduce((total, item) => total + Number(selector(item) || 0), 0);
+}
+
+function productLabel(product) {
+  if (!product) return "-";
+  return `${product.sku ? `${product.sku} · ` : ""}${product.name || "-"}`;
+}
+
+function movementResponsible(item) {
+  return item?.created_by?.name || item?.user?.name || item?.responsible?.name || "Sistema";
+}
+
+function movementDestination(output) {
+  return output?.destination || output?.employee?.name || output?.employee?.enrollment || "-";
 }
 
 function roleLabel(role) {
@@ -774,6 +826,7 @@ const PageRenderers = {
   saidas: renderOutputs,
   categorias: renderCategories,
   fornecedores: renderSuppliers,
+  alertas: renderAlerts,
   funcionarios: renderEmployees,
   matriculas: renderEnrollments,
   relatorios: renderReports,
@@ -811,84 +864,94 @@ async function renderPage(page = pageFromPath()) {
 }
 
 async function renderDashboard() {
-  const data = await api("/api/dashboard");
+  const [data, latestEntries, latestOutputs] = await Promise.all([
+    api("/api/dashboard"),
+    hasPermission("stock.view") ? api("/api/entries?per_page=5").catch(() => ({ items: [] })) : Promise.resolve({ items: [] }),
+    hasPermission("stock.view") ? api("/api/outputs?per_page=5").catch(() => ({ items: [] })) : Promise.resolve({ items: [] }),
+  ]);
   const kpi = data.kpi || {};
+  const latestEntry = (latestEntries.items || [])[0];
+  const latestOutput = (latestOutputs.items || [])[0];
 
-  // Saudação Dinâmica baseada no horário local
   const hour = new Date().getHours();
-  let greeting = "Boa noite 🌙";
-  if (hour >= 5 && hour < 12) greeting = "Bom dia 👋";
-  else if (hour >= 12 && hour < 18) greeting = "Boa tarde ☀️";
+  let greeting = "Boa noite";
+  if (hour >= 5 && hour < 12) greeting = "Bom dia";
+  else if (hour >= 12 && hour < 18) greeting = "Boa tarde";
 
-  // Formatação de data completa para o cabeçalho
-  const todayFull = new Intl.DateTimeFormat('pt-BR', { 
-    dateStyle: 'full' 
+  const todayFull = new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "full",
   }).format(new Date());
 
-  // KPIs consolidados com IDs para animação
   pageWrap().innerHTML = `
-    <div class="greeting-box">
-      <h2>${greeting}, ${escapeHtml(IMAStock.state.user?.name.split(' ')[0])}</h2>
-      <p>Hoje é ${escapeHtml(todayFull)}</p>
+    <div class="greeting-box dashboard-hero">
+      <div>
+        <span class="eyebrow">Painel operacional</span>
+        <h2>${greeting}, ${escapeHtml(IMAStock.state.user?.name?.split(" ")[0] || "usuário")}</h2>
+        <p>Hoje é ${escapeHtml(todayFull)}. Acompanhe estoque, valor contábil e alertas em tempo real.</p>
+      </div>
+      <button class="btn ghost" type="button" data-dashboard-nav="estoque">
+        <i class="fa-solid fa-boxes-stacked"></i> Ver estoque
+      </button>
     </div>
 
-    <div class="kpi-grid">
-      ${kpiCard("Produtos", kpi.total_products, "Itens no catálogo", "fa-barcode", "", "kpi-products")}
-      ${kpiCard("Estoque Total", kpi.total_units, "Unidades em posse", "fa-boxes-stacked", "green", "kpi-units")}
-      ${kpiCard("Valor Contábil", fmtMoney(kpi.inventory_value), "Patrimônio atual", "fa-wallet", "cyan", "kpi-value")}
-      ${kpiCard("Alertas", (Number(kpi.low_stock) + Number(kpi.out_stock)), "Ações necessárias", "fa-triangle-exclamation", "amber", "kpi-alerts")}
-      ${kpiCard("Entradas (Hoje)", kpi.entries_today, "Recebidas", "fa-arrow-down-long", "green", "kpi-entries")}
-      ${kpiCard("Saídas (Hoje)", kpi.outputs_today, "Expedidas", "fa-arrow-up-long", "red", "kpi-outputs")}
+    <div class="kpi-grid dashboard-kpi-grid">
+      ${kpiCard("Produtos", kpi.total_products, "Itens no catálogo", "fa-barcode", "", "kpi-products", {
+        className: "interactive-kpi",
+        attrs: 'role="button" tabindex="0" data-dashboard-panel="products"',
+      })}
+      ${kpiCard("Estoque", kpi.total_units, "Unidades disponíveis", "fa-boxes-stacked", "green", "kpi-units", {
+        className: "interactive-kpi",
+        attrs: 'role="button" tabindex="0" data-dashboard-panel="stock"',
+      })}
+      ${kpiCard("Valor Contábil", fmtMoney(kpi.inventory_value), "Patrimônio atual", "fa-wallet", "cyan", "kpi-value", {
+        className: "interactive-kpi",
+        attrs: 'role="button" tabindex="0" data-dashboard-panel="value"',
+      })}
+      ${kpiCard("Alertas", (Number(kpi.low_stock) + Number(kpi.out_stock)), "Ações necessárias", "fa-triangle-exclamation", "amber", "kpi-alerts", {
+        className: "interactive-kpi",
+        attrs: 'role="button" tabindex="0" data-dashboard-panel="alerts"',
+      })}
     </div>
 
-    <div class="dash-main-grid">
-      <section class="panel">
-        <div class="panel-head"><h3>Fluxo de Movimentação (14 dias)</h3></div>
-        <div class="panel-body">
-          <div class="chart-box"><canvas id="movement-chart"></canvas></div>
-        </div>
-      </section>
+    <div class="dashboard-layout">
+      <div class="dashboard-primary">
+        <section class="panel dashboard-detail-panel">
+          <div class="panel-head">
+            <h3 id="dashboard-detail-title">Produtos</h3>
+          </div>
+          <div class="panel-body" id="dashboard-detail-body">
+            ${dashboardModuleDetail("products", data)}
+          </div>
+        </section>
 
-      <div class="dash-row">
-        <section class="panel">
-          <div class="panel-head"><h3>⚠️ Estoque Crítico</h3></div>
-          <div class="panel-body" style="padding:0">
-            ${renderCriticalStock(data.critical_stock || [])}
+        <section class="panel dashboard-chart-panel">
+          <div class="panel-head"><h3>Fluxo de movimentação (14 dias)</h3></div>
+          <div class="panel-body">
+            <div class="chart-box"><canvas id="movement-chart"></canvas></div>
           </div>
         </section>
 
         <section class="panel">
-          <div class="panel-head"><h3>📊 Resumo Executivo</h3></div>
+          <div class="panel-head"><h3>Distribuição de inventário por categoria</h3></div>
           <div class="panel-body">
-            <div style="display:flex; flex-direction:column; gap:16px">
-              ${summaryItem("Produtos Ativos", kpi.total_products, "fa-tag")}
-              ${summaryItem("Categorias", kpi.categories_count, "fa-layer-group")}
-              <hr style="border:0; border-top:1px solid var(--border); margin:4px 0">
-              ${summaryItem("Entradas no Mês", fmtQty(kpi.entries_month), "fa-arrow-down", "text-success")}
-              ${summaryItem("Saídas no Mês", fmtQty(kpi.outputs_month), "fa-arrow-up", "text-danger")}
-              ${summaryItem("Valor Total", fmtMoney(kpi.inventory_value), "fa-wallet", "text-primary")}
-            </div>
+            <div class="chart-box sm"><canvas id="category-chart"></canvas></div>
           </div>
         </section>
       </div>
 
-      <section class="panel">
-        <div class="panel-head"><h3>Distribuição de Inventário por Categoria</h3></div>
-        <div class="panel-body">
-          <div class="chart-box sm"><canvas id="category-chart"></canvas></div>
-        </div>
-      </section>
+      <aside class="dashboard-sidebar-widgets">
+        ${dashboardMovementWidget("Última entrada", latestEntry, "entry")}
+        ${dashboardMovementWidget("Última saída", latestOutput, "output")}
+        ${dashboardCriticalWidget(data.critical_stock || [])}
+      </aside>
     </div>
   `;
 
-  // Animação dos contadores
   animateValue("kpi-products", 0, kpi.total_products, 1000);
   animateValue("kpi-units", 0, kpi.total_units, 1000);
   animateValue("kpi-alerts", 0, (Number(kpi.low_stock) + Number(kpi.out_stock)), 1000);
-  animateValue("kpi-entries", 0, kpi.entries_today, 1000);
-  animateValue("kpi-outputs", 0, kpi.outputs_today, 1000);
+  bindDashboardModules(data);
 
-  // Gráficos Reais
   const movement = data.chart_movements || [];
   renderLineChart(
     "movement-chart",
@@ -903,7 +966,169 @@ async function renderDashboard() {
     categories.map((item) => item.name),
     categories.map((item) => item.count),
   );
+}
 
+function bindDashboardModules(data) {
+  const title = $("#dashboard-detail-title");
+  const body = $("#dashboard-detail-body");
+  const activate = (type) => {
+    $all("[data-dashboard-panel]").forEach((card) => {
+      card.classList.toggle("active", card.dataset.dashboardPanel === type);
+    });
+    title.textContent = ({
+      products: "Produtos",
+      stock: "Estoque",
+      value: "Valor contábil",
+      alerts: "Alertas",
+    })[type] || "Detalhes";
+    body.innerHTML = dashboardModuleDetail(type, data);
+    bindDashboardNavButtons(body);
+  };
+
+  $all("[data-dashboard-panel]").forEach((card) => {
+    card.addEventListener("click", () => activate(card.dataset.dashboardPanel));
+    card.addEventListener("keydown", (event) => {
+      if (!["Enter", " "].includes(event.key)) return;
+      event.preventDefault();
+      activate(card.dataset.dashboardPanel);
+    });
+  });
+  bindDashboardNavButtons(pageWrap());
+  activate("products");
+}
+
+function bindDashboardNavButtons(root) {
+  $all("[data-dashboard-nav]", root).forEach((button) => {
+    button.addEventListener("click", () => navigate(button.dataset.dashboardNav));
+  });
+}
+
+function dashboardModuleDetail(type, data) {
+  const kpi = data.kpi || {};
+  const critical = data.critical_stock || [];
+  const alertTotal = Number(kpi.low_stock || 0) + Number(kpi.out_stock || 0);
+
+  if (type === "stock") {
+    return `
+      <div class="detail-grid">
+        ${detailMetric("Unidades em estoque", fmtQty(kpi.total_units), "fa-boxes-stacked", "success")}
+        ${detailMetric("Entradas no mês", fmtQty(kpi.entries_month), "fa-arrow-down-long", "success")}
+        ${detailMetric("Saídas no mês", fmtQty(kpi.outputs_month), "fa-arrow-up-long", "danger")}
+      </div>
+      <div class="detail-copy">
+        <strong>Saúde do estoque</strong>
+        <p>${alertTotal ? `${alertTotal} item(ns) precisam de atenção.` : "Nenhum alerta crítico no momento."}</p>
+        <button class="btn ghost sm" type="button" data-dashboard-nav="estoque"><i class="fa-solid fa-box-open"></i> Abrir estoque</button>
+      </div>
+    `;
+  }
+
+  if (type === "value") {
+    const averageByProduct = Number(kpi.total_products || 0) ? Number(kpi.inventory_value || 0) / Number(kpi.total_products || 1) : 0;
+    const averageByUnit = Number(kpi.total_units || 0) ? Number(kpi.inventory_value || 0) / Number(kpi.total_units || 1) : 0;
+    return `
+      <div class="detail-grid">
+        ${detailMetric("Valor total", fmtMoney(kpi.inventory_value), "fa-wallet", "info")}
+        ${detailMetric("Média por produto", fmtMoney(averageByProduct), "fa-chart-pie", "info")}
+        ${detailMetric("Custo médio unitário", fmtMoney(averageByUnit), "fa-scale-balanced", "info")}
+      </div>
+      <div class="detail-copy">
+        <strong>Financeiro do estoque</strong>
+        <p>Valor calculado a partir do saldo atual multiplicado pelo custo unitário cadastrado.</p>
+        <button class="btn ghost sm" type="button" data-dashboard-nav="financeiro"><i class="fa-solid fa-coins"></i> Ver financeiro</button>
+      </div>
+    `;
+  }
+
+  if (type === "alerts") {
+    return `
+      <div class="detail-grid">
+        ${detailMetric("Baixo estoque", fmtQty(kpi.low_stock), "fa-arrow-trend-down", "warning")}
+        ${detailMetric("Zerados", fmtQty(kpi.out_stock), "fa-circle-exclamation", "danger")}
+        ${detailMetric("Total de alertas", fmtQty(alertTotal), "fa-triangle-exclamation", "warning")}
+      </div>
+      <div class="detail-table">
+        ${critical.length ? renderCriticalStock(critical.slice(0, 5)) : emptyState("fa-check-circle", "Tudo em ordem", "Não há produtos críticos no momento.")}
+      </div>
+    `;
+  }
+
+  return `
+    <div class="detail-grid">
+      ${detailMetric("Produtos ativos", fmtQty(kpi.total_products), "fa-barcode", "primary")}
+      ${detailMetric("Categorias", fmtQty(kpi.categories_count), "fa-layer-group", "primary")}
+      ${detailMetric("Fornecedores", fmtQty(kpi.suppliers), "fa-handshake", "primary")}
+    </div>
+    <div class="detail-copy">
+      <strong>Catálogo operacional</strong>
+      <p>Base de SKUs pronta para entradas, saídas, relatórios e controle de saldo.</p>
+      <button class="btn ghost sm" type="button" data-dashboard-nav="produtos"><i class="fa-solid fa-barcode"></i> Abrir produtos</button>
+    </div>
+  `;
+}
+
+function detailMetric(label, value, icon, tone = "primary") {
+  return `
+    <div class="detail-metric ${tone}">
+      <div class="detail-icon"><i class="fa-solid ${icon}"></i></div>
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(value)}</strong>
+    </div>
+  `;
+}
+
+function dashboardMovementWidget(title, item, type) {
+  const isEntry = type === "entry";
+  if (!item) {
+    return `
+      <section class="panel dashboard-widget ${type}">
+        <div class="panel-head"><h3>${escapeHtml(title)}</h3></div>
+        <div class="panel-body">
+          ${emptyState(isEntry ? "fa-arrow-down-to-bracket" : "fa-arrow-up-from-bracket", `Sem ${isEntry ? "entradas" : "saídas"}`, "As movimentações recentes aparecerão aqui.")}
+        </div>
+      </section>
+    `;
+  }
+  return `
+    <section class="panel dashboard-widget ${type}">
+      <div class="panel-head"><h3>${escapeHtml(title)}</h3></div>
+      <div class="panel-body">
+        <div class="widget-movement">
+          <div class="widget-icon"><i class="fa-solid ${isEntry ? "fa-arrow-down-to-bracket" : "fa-arrow-up-from-bracket"}"></i></div>
+          <div>
+            <strong>${escapeHtml(productLabel(item.product))}</strong>
+            <span>${fmtQty(item.quantity)} un. · ${fmtDate(isEntry ? item.entry_date : item.output_date)}</span>
+          </div>
+        </div>
+        <div class="widget-meta">
+          <span>${escapeHtml(isEntry ? (item.supplier?.name || "Fornecedor não informado") : movementDestination(item))}</span>
+          <strong>${fmtMoney(isEntry ? item.total_cost : item.total_price)}</strong>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function dashboardCriticalWidget(items) {
+  return `
+    <section class="panel dashboard-widget alerts">
+      <div class="panel-head">
+        <h3>Produtos críticos</h3>
+        <button class="btn sm ghost" type="button" data-dashboard-nav="estoque">Ver</button>
+      </div>
+      <div class="panel-body ${items.length ? "compact-list" : ""}">
+        ${items.length ? items.slice(0, 4).map((p) => `
+          <div class="critical-mini">
+            <div>
+              <strong>${escapeHtml(p.name)}</strong>
+              <span class="mono">${escapeHtml(p.sku)}</span>
+            </div>
+            <span class="badge ${p.stock <= 0 ? "danger" : "warning"}">${p.stock <= 0 ? "Zerado" : "Baixo"}</span>
+          </div>
+        `).join("") : emptyState("fa-check-circle", "Tudo em ordem", "Nenhum produto crítico no momento.")}
+      </div>
+    </section>
+  `;
 }
 
 function renderCriticalStock(items) {
@@ -929,12 +1154,14 @@ function renderCriticalStock(items) {
   `;
 }
 
-function kpiCard(label, value, delta, icon, color = "", id = "") {
+function kpiCard(label, value, delta, icon, color = "", id = "", options = {}) {
+  const classes = ["kpi-card", options.className || ""].filter(Boolean).join(" ");
+  const attrs = options.attrs || "";
   return `
-    <div class="kpi-card">
+    <div class="${classes}" ${attrs}>
       <div>
         <div class="kpi-label">${escapeHtml(label)}</div>
-        <div class="kpi-value" id="${id}">${escapeHtml(value ?? 0)}</div>
+        <div class="kpi-value"${id ? ` id="${escapeHtml(id)}"` : ""}>${escapeHtml(value ?? 0)}</div>
         <div class="kpi-delta">${escapeHtml(delta)}</div>
       </div>
       <div class="kpi-icon ${color}"><i class="fa-solid ${icon}"></i></div>
@@ -1056,7 +1283,7 @@ async function renderProducts(params = {}) {
           </select>
         `,
       })}
-      ${productsTable(data.items || [], { canEdit, canDelete })}
+      ${productsTable(data.items || [], { canEdit, canDelete, canCreate })}
       ${pagination(data.meta, "products")}
     </div>
   `;
@@ -1067,6 +1294,7 @@ async function renderProducts(params = {}) {
   $("#products-stock").addEventListener("change", (event) => renderProducts({ ...params, page: 1, stock_status: event.target.value }));
   bindPagination("products", (page) => renderProducts({ ...params, page }));
   $("#new-product")?.addEventListener("click", () => openProductModal());
+  $("#new-product-empty")?.addEventListener("click", () => openProductModal());
   $("#import-products")?.addEventListener("click", () => openImportModal());
   $("#download-template")?.addEventListener("click", () => downloadImportTemplate());
   bindRowActions({
@@ -1075,7 +1303,7 @@ async function renderProducts(params = {}) {
   });
 }
 
-function productsTable(items, { canEdit, canDelete }) {
+function productsTable(items, { canEdit, canDelete, canCreate }) {
   return tableBody(
     [
       { label: "SKU" },
@@ -1110,16 +1338,28 @@ function productsTable(items, { canEdit, canDelete }) {
         </td>
       </tr>
     `),
-    emptyState("fa-tags", "Nenhum produto encontrado", "Cadastre produtos para movimentar o estoque."),
+    emptyState(
+      "fa-tags",
+      "Nenhum produto encontrado",
+      "Cadastre produtos para movimentar o estoque.",
+      canCreate ? { id: "new-product-empty", label: "Novo produto", icon: "fa-plus" } : null,
+    ),
   );
 }
 
 function stockBar(p) {
-  const max = Number(p.max_stock || p.min_stock || p.stock_quantity || 1);
-  const percent = Math.max(5, Math.min(100, (Number(p.stock_quantity || 0) / max) * 100));
+  const current = Number(p.stock_quantity || 0);
+  const configuredMax = Number(p.max_stock || 0);
+  const fallbackMax = Math.max(current, Number(p.min_stock || 0) * 2, 1);
+  const max = configuredMax > 0 ? configuredMax : fallbackMax;
+  const percent = Math.max(0, Math.min(100, Math.round((current / max) * 100)));
+  const status = p.stock_status || (percent <= 0 ? "out" : percent <= 35 ? "low" : "ok");
   return `
-    <div class="stock-bar ${p.stock_status}">
-      <span style="width:${percent}%"></span>
+    <div class="stock-progress ${status}" title="${fmtQty(current)} de ${fmtQty(max)}">
+      <div class="stock-progress-track">
+        <span style="width:${percent}%"></span>
+      </div>
+      <strong>${percent}%</strong>
     </div>
   `;
 }
@@ -1396,7 +1636,7 @@ async function openImportModal() {
   };
 }
 
-function openProductModal(product = null) {
+function openProductModal(product = null, onSaved = null) {
   openModal({
     title: product ? "Editar produto" : "Novo produto",
     size: "lg",
@@ -1418,7 +1658,11 @@ function openProductModal(product = null) {
       });
       closeModal();
       toast("Produto salvo", "Cadastro atualizado com sucesso.");
-      renderProducts();
+      if (typeof onSaved === "function") {
+        onSaved();
+      } else {
+        renderProducts();
+      }
     } catch (error) {
       toast("Erro ao salvar produto", error.message, "danger");
     }
@@ -1440,6 +1684,7 @@ function deleteProduct(id) {
 
 async function renderStock(params = {}) {
   const data = await api(`/api/stock${buildQuery({ page: params.page || 1, search: params.search, stock_status: params.stock_status })}`);
+  const canEditProducts = hasPermission("products.edit");
   pageWrap().innerHTML = `
     ${pageHeader("estoque", "Consulta operacional de saldo, alertas e cobertura.", `
       <a class="btn ghost" href="/api/reports/export/stock.xlsx"><i class="fa-solid fa-file-excel"></i> Excel</a>
@@ -1458,7 +1703,7 @@ async function renderStock(params = {}) {
           </select>
         `,
       })}
-      ${stockTable(data.items || [])}
+      ${stockTable(data.items || [], { canEditProducts })}
       ${pagination(data.meta, "stock")}
     </div>
   `;
@@ -1476,19 +1721,24 @@ async function renderStock(params = {}) {
       await loadLookupData(["products", "employees"]);
       openOutputModal({ product_id: id });
     },
+    edit: async (id) => {
+      await loadLookupData(["categories", "suppliers", "locations"]);
+      openProductModal((data.items || []).find((item) => item.id === id), () => renderStock(params));
+    },
   });
 }
 
-function stockTable(items) {
+function stockTable(items, { canEditProducts } = {}) {
   return tableBody(
     [
       { label: "SKU" },
       { label: "Produto" },
       { label: "Local" },
-      { label: "Atual", cls: "num" },
+      { label: "Estoque", cls: "num" },
       { label: "Mínimo", cls: "num" },
       { label: "Máximo", cls: "num" },
-      { label: "Valor", cls: "num" },
+      { label: "Custo unit.", cls: "num" },
+      { label: "Valor total", cls: "num" },
       { label: "Status" },
       { label: "", cls: "actions" },
     ],
@@ -1503,11 +1753,13 @@ function stockTable(items) {
         <td class="num">${fmtQty(p.stock_quantity)}${stockBar(p)}</td>
         <td class="num">${fmtQty(p.min_stock)}</td>
         <td class="num">${fmtQty(p.max_stock)}</td>
+        <td class="num">${fmtMoney(p.cost_price)}</td>
         <td class="num">${fmtMoney(Number(p.stock_quantity || 0) * Number(p.cost_price || 0))}</td>
         <td>${stockBadge(p)}</td>
         <td class="actions">
-          <button class="btn icon-only sm success" title="Entrada" data-action="entry" data-id="${p.id}"><i class="fa-solid fa-plus"></i></button>
-          <button class="btn icon-only sm danger" title="Saída" data-action="output" data-id="${p.id}"><i class="fa-solid fa-minus"></i></button>
+          <button class="btn sm success action-label" title="Registrar entrada" data-action="entry" data-id="${p.id}"><i class="fa-solid fa-arrow-down-to-bracket"></i> Entrada</button>
+          <button class="btn sm danger action-label" title="Registrar saída" data-action="output" data-id="${p.id}"><i class="fa-solid fa-arrow-up-from-bracket"></i> Saída</button>
+          ${canEditProducts ? `<button class="btn sm ghost action-label" title="Editar produto" data-action="edit" data-id="${p.id}"><i class="fa-solid fa-pen"></i> Editar</button>` : ""}
         </td>
       </tr>
     `),
@@ -1517,42 +1769,65 @@ function stockTable(items) {
 
 async function renderEntries(params = {}) {
   await loadLookupData(["products", "suppliers"]);
-  const data = await api(`/api/entries${buildQuery({ page: params.page || 1 })}`);
+  const today = localDateParam(new Date());
+  const weekStart = localDateParam(startOfWeek());
+  const [data, todayData, weekData] = await Promise.all([
+    api(`/api/entries${buildQuery({ page: params.page || 1 })}`),
+    api(`/api/entries${buildQuery({ date_from: today, per_page: 200 })}`),
+    api(`/api/entries${buildQuery({ date_from: weekStart, per_page: 200 })}`),
+  ]);
   pageWrap().innerHTML = `
     ${pageHeader("entradas", "Recebimentos, compras, devoluções e ajustes positivos.", hasPermission("stock.entry") ? `
       <button class="btn primary" id="new-entry"><i class="fa-solid fa-plus"></i> Registrar entrada</button>
     ` : "")}
+    ${movementSummaryCards([
+      { label: "Entradas hoje", value: todayData.meta?.total ?? (todayData.items || []).length, delta: "Movimentações registradas", icon: "fa-calendar-day", tone: "green" },
+      { label: "Entradas da semana", value: weekData.meta?.total ?? (weekData.items || []).length, delta: "Desde segunda-feira", icon: "fa-calendar-week", tone: "green" },
+      { label: "Valor comprado", value: fmtMoney(sumBy(weekData.items || [], (item) => item.status === "cancelled" ? 0 : item.total_cost)), delta: "Entradas da semana", icon: "fa-file-invoice-dollar", tone: "cyan" },
+    ])}
     ${entriesTable(data.items || [])}
     ${pagination(data.meta, "entries")}
   `;
   $("#new-entry")?.addEventListener("click", () => openEntryModal());
+  $("#new-entry-empty")?.addEventListener("click", () => openEntryModal());
   bindPagination("entries", (page) => renderEntries({ ...params, page }));
   bindRowActions({
     cancel: (id) => cancelEntry(id),
   });
 }
 
+function movementSummaryCards(cards) {
+  return `
+    <div class="kpi-grid movement-kpi-grid">
+      ${cards.map((card) => kpiCard(card.label, card.value, card.delta, card.icon, card.tone, "", {
+        className: `movement-kpi ${card.tone || ""}`,
+      })).join("")}
+    </div>
+  `;
+}
+
 function entriesTable(items) {
   return table(
     [
       { label: "Data" },
-      { label: "Documento" },
       { label: "Produto" },
+      { label: "Quantidade", cls: "num" },
       { label: "Fornecedor" },
-      { label: "Qtde", cls: "num" },
-      { label: "Custo", cls: "num" },
-      { label: "Total", cls: "num" },
+      { label: "Responsável" },
+      { label: "Valor", cls: "num" },
       { label: "Status" },
       { label: "", cls: "actions" },
     ],
     items.map((e) => `
       <tr>
         <td>${fmtDate(e.entry_date)}</td>
-        <td class="mono">${escapeHtml(e.document || "-")}</td>
-        <td>${escapeHtml(e.product?.sku || "")} · ${escapeHtml(e.product?.name || "-")}</td>
-        <td>${escapeHtml(e.supplier?.name || "-")}</td>
+        <td>
+          <strong>${escapeHtml(e.product?.name || "-")}</strong>
+          <div class="text-muted">${escapeHtml([e.product?.sku, e.document].filter(Boolean).join(" · ") || "-")}</div>
+        </td>
         <td class="num">${fmtQty(e.quantity)}</td>
-        <td class="num">${fmtMoney(e.unit_cost)}</td>
+        <td>${escapeHtml(e.supplier?.name || "-")}</td>
+        <td>${escapeHtml(movementResponsible(e))}</td>
         <td class="num">${fmtMoney(e.total_cost)}</td>
         <td>${movementStatusBadge(e.status)}</td>
         <td class="actions">
@@ -1560,7 +1835,12 @@ function entriesTable(items) {
         </td>
       </tr>
     `),
-    emptyState("fa-arrow-down-to-bracket", "Nenhuma entrada registrada", "Registre recebimentos para atualizar o saldo de estoque."),
+    emptyState(
+      "fa-arrow-down-to-bracket",
+      "Nenhuma entrada registrada",
+      "Registre sua primeira entrada para iniciar o controle de estoque.",
+      hasPermission("stock.entry") ? { id: "new-entry-empty", label: "Registrar entrada", icon: "fa-plus" } : null,
+    ),
   );
 }
 
@@ -1645,15 +1925,29 @@ function cancelEntry(id) {
 
 async function renderOutputs(params = {}) {
   await loadLookupData(["products", "employees"]);
-  const data = await api(`/api/outputs${buildQuery({ page: params.page || 1 })}`);
+  const today = localDateParam(new Date());
+  const weekStart = localDateParam(startOfWeek());
+  const monthStart = localDateParam(startOfMonth());
+  const [data, todayData, weekData, monthData] = await Promise.all([
+    api(`/api/outputs${buildQuery({ page: params.page || 1 })}`),
+    api(`/api/outputs${buildQuery({ date_from: today, per_page: 200 })}`),
+    api(`/api/outputs${buildQuery({ date_from: weekStart, per_page: 200 })}`),
+    api(`/api/outputs${buildQuery({ date_from: monthStart, per_page: 200 })}`),
+  ]);
   pageWrap().innerHTML = `
     ${pageHeader("saidas", "Requisições internas, consumo, perdas, transferências e vendas.", hasPermission("stock.output") ? `
       <button class="btn primary" id="new-output"><i class="fa-solid fa-plus"></i> Registrar saída</button>
     ` : "")}
+    ${movementSummaryCards([
+      { label: "Saídas hoje", value: todayData.meta?.total ?? (todayData.items || []).length, delta: "Baixas registradas", icon: "fa-calendar-day", tone: "red" },
+      { label: "Saídas semana", value: weekData.meta?.total ?? (weekData.items || []).length, delta: "Desde segunda-feira", icon: "fa-calendar-week", tone: "red" },
+      { label: "Consumo mensal", value: fmtQty(sumBy(monthData.items || [], (item) => item.status === "cancelled" ? 0 : item.quantity)), delta: "Unidades baixadas", icon: "fa-chart-line", tone: "amber" },
+    ])}
     ${outputsTable(data.items || [])}
     ${pagination(data.meta, "outputs")}
   `;
   $("#new-output")?.addEventListener("click", () => openOutputModal());
+  $("#new-output-empty")?.addEventListener("click", () => openOutputModal());
   bindPagination("outputs", (page) => renderOutputs({ ...params, page }));
   bindRowActions({
     cancel: (id) => cancelOutput(id),
@@ -1664,23 +1958,24 @@ function outputsTable(items) {
   return table(
     [
       { label: "Data" },
-      { label: "Documento" },
       { label: "Produto" },
-      { label: "Funcionário" },
+      { label: "Quantidade", cls: "num" },
+      { label: "Destino" },
       { label: "Motivo" },
-      { label: "Qtde", cls: "num" },
-      { label: "Total", cls: "num" },
+      { label: "Valor", cls: "num" },
       { label: "Status" },
       { label: "", cls: "actions" },
     ],
     items.map((o) => `
       <tr>
         <td>${fmtDate(o.output_date)}</td>
-        <td class="mono">${escapeHtml(o.document || "-")}</td>
-        <td>${escapeHtml(o.product?.sku || "")} · ${escapeHtml(o.product?.name || "-")}</td>
-        <td>${escapeHtml(o.employee?.enrollment || "")} ${escapeHtml(o.employee?.name || "-")}</td>
-        <td>${escapeHtml(reasonLabel(o.reason))}</td>
+        <td>
+          <strong>${escapeHtml(o.product?.name || "-")}</strong>
+          <div class="text-muted">${escapeHtml([o.product?.sku, o.document].filter(Boolean).join(" · ") || "-")}</div>
+        </td>
         <td class="num">${fmtQty(o.quantity)}</td>
+        <td>${escapeHtml(movementDestination(o))}</td>
+        <td>${escapeHtml(reasonLabel(o.reason))}</td>
         <td class="num">${fmtMoney(o.total_price)}</td>
         <td>${movementStatusBadge(o.status)}</td>
         <td class="actions">
@@ -1688,7 +1983,12 @@ function outputsTable(items) {
         </td>
       </tr>
     `),
-    emptyState("fa-arrow-up-from-bracket", "Nenhuma saída registrada", "Registre requisições para baixar o saldo de estoque."),
+    emptyState(
+      "fa-arrow-up-from-bracket",
+      "Nenhuma saída registrada",
+      "Registre sua primeira saída para acompanhar consumo e destino dos materiais.",
+      hasPermission("stock.output") ? { id: "new-output-empty", label: "Registrar saída", icon: "fa-plus" } : null,
+    ),
   );
 }
 
@@ -1874,13 +2174,14 @@ function deleteCategory(id) {
 
 async function renderSuppliers(params = {}) {
   const data = await api(`/api/suppliers${buildQuery({ page: params.page || 1, search: params.search })}`);
+  const canManage = hasPermission("suppliers.manage");
   pageWrap().innerHTML = `
-    ${pageHeader("fornecedores", "Cadastro comercial para compras e recebimentos.", hasPermission("suppliers.manage") ? `
+    ${pageHeader("fornecedores", "Cadastro comercial para compras e recebimentos.", canManage ? `
       <button class="btn primary" id="new-supplier"><i class="fa-solid fa-plus"></i> Novo fornecedor</button>
     ` : "")}
     <div class="table-wrap">
       ${toolbar({ id: "suppliers", placeholder: "Buscar por nome, CNPJ ou e-mail" })}
-      ${suppliersTable(data.items || [])}
+      ${suppliersTable(data.items || [], { canManage })}
       ${pagination(data.meta, "suppliers")}
     </div>
   `;
@@ -1888,13 +2189,14 @@ async function renderSuppliers(params = {}) {
   bindSearch("#suppliers-search", (value) => renderSuppliers({ ...params, page: 1, search: value }));
   bindPagination("suppliers", (page) => renderSuppliers({ ...params, page }));
   $("#new-supplier")?.addEventListener("click", () => openSupplierModal());
+  $("#new-supplier-empty")?.addEventListener("click", () => openSupplierModal());
   bindRowActions({
     edit: (id) => openSupplierModal((data.items || []).find((item) => item.id === id)),
     delete: (id) => deleteSupplier(id),
   });
 }
 
-function suppliersTable(items) {
+function suppliersTable(items, { canManage } = {}) {
   return tableBody(
     [
       { label: "Fornecedor" },
@@ -1920,7 +2222,12 @@ function suppliersTable(items) {
         </td>
       </tr>
     `),
-    emptyState("fa-truck-fast", "Nenhum fornecedor", "Cadastre fornecedores para vincular compras e produtos."),
+    emptyState(
+      "fa-truck-fast",
+      "Nenhum fornecedor",
+      "Cadastre fornecedores para vincular compras, contatos e produtos.",
+      canManage ? { id: "new-supplier-empty", label: "Novo fornecedor", icon: "fa-plus" } : null,
+    ),
   );
 }
 
@@ -2207,6 +2514,7 @@ async function renderReports() {
       ${kpiCard("Valor recebido", fmtMoney(summary.value_in), "Últimos 30 dias", "fa-file-invoice-dollar", "cyan")}
       ${kpiCard("Valor de saída", fmtMoney(summary.value_out), "Últimos 30 dias", "fa-receipt", "amber")}
     </div>
+    ${reportsEmptyState(summary)}
     <section class="panel">
       <div class="panel-head">
         <h3>Exportações disponíveis</h3>
@@ -2232,6 +2540,116 @@ async function renderReports() {
       </div>
     </section>
   `;
+}
+
+function reportsEmptyState(summary) {
+  const hasMovement = Number(summary.entries_count || 0) + Number(summary.outputs_count || 0) > 0;
+  if (hasMovement) return "";
+  return `
+    <section class="panel">
+      <div class="panel-body">
+        ${emptyState(
+          "fa-chart-column",
+          "Nenhum dado para relatório",
+          "Assim que entradas e saídas forem registradas, os indicadores deste período aparecerão aqui.",
+          { label: "Exportar estoque", icon: "fa-file-excel", href: "/api/reports/export/stock.xlsx", variant: "ghost" },
+        )}
+      </div>
+    </section>
+  `;
+}
+
+async function renderAlerts() {
+  const [notifications, dashboard] = await Promise.all([
+    api("/api/notifications").catch(() => ({ items: [], unread: 0 })),
+    api("/api/dashboard").catch(() => ({ critical_stock: [], kpi: {} })),
+  ]);
+  const items = notifications.items || [];
+  const critical = dashboard.critical_stock || [];
+  const unread = Number(notifications.unread || 0);
+  const kpi = dashboard.kpi || {};
+  const alertTotal = Number(kpi.low_stock || 0) + Number(kpi.out_stock || 0);
+  const isEmpty = !items.length && !critical.length;
+
+  pageWrap().innerHTML = `
+    ${pageHeader("alertas", "Notificações operacionais e produtos que precisam de atenção.", `
+      <button class="btn ghost" id="alerts-readall"><i class="fa-solid fa-check-double"></i> Marcar lidas</button>
+      <button class="btn primary" id="alerts-open-stock"><i class="fa-solid fa-boxes-stacked"></i> Ver estoque</button>
+    `)}
+    <div class="kpi-grid movement-kpi-grid">
+      ${kpiCard("Não lidas", unread, "Notificações pendentes", "fa-bell", "amber")}
+      ${kpiCard("Baixo estoque", kpi.low_stock || 0, "Acima de zero", "fa-arrow-trend-down", "amber")}
+      ${kpiCard("Zerados", kpi.out_stock || 0, "Sem saldo disponível", "fa-circle-exclamation", "red")}
+      ${kpiCard("Alertas totais", alertTotal, "Produtos em atenção", "fa-triangle-exclamation", "amber")}
+    </div>
+    ${isEmpty ? `
+      <section class="panel">
+        <div class="panel-body">
+          ${emptyState(
+            "fa-shield-check",
+            "Nenhum alerta ativo",
+            "Quando houver notificações ou produtos críticos, eles aparecerão nesta área.",
+            { id: "alerts-empty-stock", label: "Acompanhar estoque", icon: "fa-boxes-stacked", variant: "ghost" },
+          )}
+        </div>
+      </section>
+    ` : `
+      <div class="grid-2 alerts-grid">
+        <section class="panel">
+          <div class="panel-head"><h3>Notificações</h3></div>
+          <div class="panel-body alerts-list">
+            ${alertsNotificationList(items)}
+          </div>
+        </section>
+        <section class="panel">
+          <div class="panel-head"><h3>Produtos críticos</h3></div>
+          <div class="panel-body ${critical.length ? "compact-list" : ""}">
+            ${critical.length ? renderCriticalStock(critical) : emptyState("fa-check-circle", "Tudo em ordem", "Não há produtos críticos no momento.")}
+          </div>
+        </section>
+      </div>
+    `}
+  `;
+
+  $("#alerts-open-stock")?.addEventListener("click", () => navigate("estoque"));
+  $("#alerts-empty-stock")?.addEventListener("click", () => navigate("estoque"));
+  $("#alerts-readall")?.addEventListener("click", () => {
+    api("/api/notifications/read-all", { method: "POST" })
+      .then(() => {
+        toast("Alertas atualizados", "Todas as notificações foram marcadas como lidas.");
+        renderAlerts();
+        loadNotifications();
+      })
+      .catch((error) => toast("Erro nos alertas", error.message, "danger"));
+  });
+  $all("[data-alert-notif-id]").forEach((item) => {
+    item.addEventListener("click", () => {
+      api(`/api/notifications/${item.dataset.alertNotifId}/read`, { method: "POST" })
+        .then(() => renderAlerts())
+        .catch(() => {});
+    });
+  });
+}
+
+function alertsNotificationList(items) {
+  if (!items.length) {
+    return emptyState(
+      "fa-bell",
+      "Sem notificações",
+      "Alertas operacionais aparecerão aqui conforme o sistema identificar eventos relevantes.",
+      { id: "alerts-empty-stock", label: "Ver estoque", icon: "fa-boxes-stacked", variant: "ghost" },
+    );
+  }
+  return items.map((n) => `
+    <div class="notif-item ${escapeHtml(n.type)} ${n.read ? "" : "unread"}" data-alert-notif-id="${n.id}">
+      <div class="ni-icon"><i class="fa-solid ${n.type === "warning" ? "fa-triangle-exclamation" : "fa-circle-info"}"></i></div>
+      <div class="ni-body">
+        <strong>${escapeHtml(n.title)}</strong>
+        <p>${escapeHtml(n.message || "")}</p>
+        <small>${fmtDate(n.created_at)}</small>
+      </div>
+    </div>
+  `).join("");
 }
 
 async function renderFinance() {
